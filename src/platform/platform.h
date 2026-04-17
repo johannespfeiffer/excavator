@@ -18,6 +18,18 @@ typedef enum {
 } platform_i2c_bus_t;
 
 typedef enum {
+    PLATFORM_GPIO_PORT_INVALID = 0,
+    PLATFORM_GPIO_PORT_A,
+    PLATFORM_GPIO_PORT_B,
+    PLATFORM_GPIO_PORT_C,
+    PLATFORM_GPIO_PORT_D,
+    PLATFORM_GPIO_PORT_E,
+    PLATFORM_GPIO_PORT_F,
+    PLATFORM_GPIO_PORT_G,
+    PLATFORM_GPIO_PORT_H,
+} platform_gpio_port_t;
+
+typedef enum {
     PLATFORM_UART_GPS = 0,
     PLATFORM_UART_OUTPUT = 1,
     PLATFORM_UART_COUNT = 2,
@@ -61,11 +73,24 @@ typedef struct {
     uint32_t error_flags;
 } platform_status_t;
 
+typedef struct {
+    platform_gpio_port_t port;
+    uint8_t pin;
+} platform_gpio_pin_t;
+
+typedef struct {
+    platform_i2c_bus_t bus;
+    platform_gpio_pin_t scl;
+    platform_gpio_pin_t sda;
+    uint32_t bitrate_hz;
+} platform_i2c_pinout_t;
+
 platform_status_t platform_init(void);
 platform_backend_t platform_backend(platform_status_t status);
 bool platform_status_ok(platform_status_t status);
 bool platform_uart_ready(platform_status_t status, platform_uart_t uart);
 bool platform_i2c_ready(platform_status_t status, platform_i2c_bus_t bus);
+bool platform_i2c_pinout(platform_i2c_bus_t bus, platform_i2c_pinout_t *pinout);
 platform_io_status_t platform_i2c_write_registers(platform_i2c_bus_t bus,
                                                   uint8_t device_address,
                                                   uint8_t register_address,

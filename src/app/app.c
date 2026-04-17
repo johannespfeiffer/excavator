@@ -8,6 +8,8 @@
 
 int app_run(void)
 {
+#if !defined(EXCAVATOR_TARGET_STM32F446RE)
+    /* Sensor wiring on STM32F446RE: S1->I2C1 (PB8/PB9). */
     static const platform_i2c_bus_t k_sensor_buses[EXCAVATOR_SENSOR_COUNT] = {
         PLATFORM_I2C1,
         PLATFORM_I2C2,
@@ -16,10 +18,10 @@ int app_run(void)
     };
 
     uint8_t index;
+#endif
     excavator_config_t config = excavator_config_default();
     platform_status_t platform_status = platform_init();
     excavator_state_t state;
-    gps_fix_t gps_fix = {0};
     bmi160_sample_t sample = {0};
 
     excavator_state_init(&state, &config);
@@ -28,6 +30,24 @@ int app_run(void)
     if (!platform_status_ok(platform_status)) {
         return 1;
     }
+
+#if defined(EXCAVATOR_TARGET_STM32F446RE)
+    /*
+     * Current hardware bench target: bring up the real S1 BMI160 on I2C1 and
+     * verify one coherent sample can be read. The remaining sensors and GPS
+     * path are still host-side/simulated work.
+     */
+    if (bmi160_init(PLATFORM_I2C1) != BMI160_STATUS_OK) {
+        return 2;
+    }
+
+    if (bmi160_read_sample(PLATFORM_I2C1, &sample) != BMI160_STATUS_OK) {
+        return 3;
+    }
+
+    return excavator_state_set_imu_sample(&state, EXCAVATOR_SENSOR_S1, &sample) ? 0 : 4;
+#else
+    gps_fix_t gps_fix = {0};
 
     for (index = 0u; index < EXCAVATOR_SENSOR_COUNT; ++index) {
         const platform_i2c_bus_t bus = k_sensor_buses[index];
@@ -57,4 +77,5 @@ int app_run(void)
     (void)excavator_state_update_result(&state);
 
     return 0;
+#endif
 }

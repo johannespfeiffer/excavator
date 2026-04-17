@@ -9,6 +9,9 @@ static int float_close(float a, float b, float tolerance)
     return diff <= tolerance;
 }
 
+static const float k_pi = 3.14159265358979323846f;
+static const float k_pi_over_2 = 1.57079632679489661923f;
+
 int main(void)
 {
     const excavator_quasistatic_filter_t filter = {
@@ -38,8 +41,8 @@ int main(void)
 
     assert(orientation_quasistatic_sample_valid(&level, &filter));
     assert(float_close(orientation_quasistatic_angle_from_accel(&level, 0.0f), 0.0f, 0.0001f));
-    assert(float_close(orientation_quasistatic_angle_from_accel(&plus_ninety, 0.0f), (float)M_PI_2, 0.0001f));
-    assert(float_close(orientation_quasistatic_angle_from_accel(&minus_forty_five, 0.0f), -(float)M_PI / 4.0f, 0.0001f));
+    assert(float_close(orientation_quasistatic_angle_from_accel(&plus_ninety, 0.0f), k_pi_over_2, 0.0001f));
+    assert(float_close(orientation_quasistatic_angle_from_accel(&minus_forty_five, 0.0f), -k_pi / 4.0f, 0.0001f));
     assert(float_close(orientation_quasistatic_angle_from_accel(&level, 0.25f), 0.25f, 0.0001f));
     assert(!orientation_quasistatic_sample_valid(&invalid, &filter));
     assert(!orientation_quasistatic_sample_valid(0, &filter));

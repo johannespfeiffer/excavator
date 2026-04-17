@@ -10,6 +10,7 @@ int main(void)
         .ready_flags = 0u,
         .error_flags = PLATFORM_ERROR_NOT_IMPLEMENTED,
     };
+    platform_i2c_pinout_t i2c1_pinout = {0};
 
     assert(platform_backend(status) == PLATFORM_BACKEND_SIMULATED);
     assert(platform_status_ok(status));
@@ -23,6 +24,15 @@ int main(void)
     assert(!platform_i2c_ready(status, PLATFORM_I2C_COUNT));
     assert(platform_backend(empty_status) == PLATFORM_BACKEND_STM32F446RE);
     assert(!platform_status_ok(empty_status));
+    assert(platform_i2c_pinout(PLATFORM_I2C1, &i2c1_pinout));
+    assert(i2c1_pinout.bus == PLATFORM_I2C1);
+    assert(i2c1_pinout.scl.port == PLATFORM_GPIO_PORT_B);
+    assert(i2c1_pinout.scl.pin == 8u);
+    assert(i2c1_pinout.sda.port == PLATFORM_GPIO_PORT_B);
+    assert(i2c1_pinout.sda.pin == 9u);
+    assert(i2c1_pinout.bitrate_hz == 400000u);
+    assert(!platform_i2c_pinout(PLATFORM_I2C_COUNT, &i2c1_pinout));
+    assert(!platform_i2c_pinout(PLATFORM_I2C1, 0));
 
     return 0;
 }
