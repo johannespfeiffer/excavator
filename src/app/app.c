@@ -60,6 +60,12 @@ int app_run(void)
                 (void)platform_uart_write(PLATFORM_UART_OUTPUT,
                                           (const uint8_t *)scan_line, scan_len);
                 scan_found = true;
+            } else {
+                /* No ACK / bus error. Log and keep scanning. */
+                scan_len = (uint16_t)snprintf(scan_line, sizeof(scan_line),
+                                              "i2c_scan: no ACK 0x%02X\r\n", scan_addr);
+                (void)platform_uart_write(PLATFORM_UART_OUTPUT,
+                                          (const uint8_t *)scan_line, scan_len);
             }
         }
         if (!scan_found) {
