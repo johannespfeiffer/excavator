@@ -86,9 +86,9 @@ static void platform_i2c1_clear_ack_failure(void)
     I2C1->SR1 &= ~I2C_SR1_AF_Msk;
 }
 
-static bool platform_i2c1_start(void)
+static bool platform_i2c1_start(bool wait_until_idle)
 {
-    if (!platform_wait_for_reg_bits(&I2C1->SR2, I2C_SR2_BUSY_Msk, false)) {
+    if (wait_until_idle && !platform_wait_for_reg_bits(&I2C1->SR2, I2C_SR2_BUSY_Msk, false)) {
         platform_i2c1_debug_record(1u); /* step 1: bus busy, never released */
         return false;
     }
@@ -157,7 +157,7 @@ static bool platform_i2c1_write_registers_impl(uint8_t device_address,
 {
     uint16_t index;
 
-    if (!platform_i2c1_start()) {
+    if (!platform_i2c1_start(true)) {
         return false;
     }
 
@@ -251,7 +251,7 @@ static bool platform_i2c1_read_registers_impl(uint8_t device_address,
                                               uint8_t *data,
                                               uint16_t length)
 {
-    if (!platform_i2c1_start()) {
+    if (!platform_i2c1_start(true)) {
         return false;
     }
 
@@ -267,7 +267,7 @@ static bool platform_i2c1_read_registers_impl(uint8_t device_address,
         return false;
     }
 
-    if (!platform_i2c1_start()) {
+    if (!platform_i2c1_start(false)) {
         platform_i2c1_stop();
         return false;
     }
