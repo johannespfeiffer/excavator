@@ -59,7 +59,8 @@ int main(void)
     assert(excavator_state_update_result(&state));
     assert(state.result.valid);
     assert(state.result.bucket_height.inputs_valid);
-    assert(state.result.bucket_height.absolute_height_m == 42.0f);
+    assert(float_close(state.result.bucket_height.delta_height_m, -0.09983342f, 0.0001f));
+    assert(float_close(state.result.bucket_height.absolute_height_m, 41.90016658f, 0.0001f));
     assert(float_close(state.estimation.orientation.s1_angle_rad, 0.0f, 0.0001f));
     assert(float_close(state.estimation.orientation.s2_angle_rad, 0.1f, 0.0001f));
     assert(float_close(state.estimation.orientation.s3_angle_rad, -0.1f, 0.0001f));

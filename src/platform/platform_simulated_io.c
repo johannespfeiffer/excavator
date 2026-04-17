@@ -19,6 +19,9 @@ enum {
     PLATFORM_SIM_BMI160_ADDRESS = 0x68u,
     PLATFORM_SIM_BMI160_REG_CHIP_ID = 0x00u,
     PLATFORM_SIM_BMI160_CHIP_ID = 0xD1u,
+    PLATFORM_SIM_BMI160_REG_GYRO_DATA = 0x0Cu,
+    PLATFORM_SIM_BMI160_REG_ACCEL_DATA = 0x12u,
+    PLATFORM_SIM_BMI160_RAW_1G = 16384u,
 };
 
 static platform_simulated_i2c_device_t g_simulated_i2c_devices[PLATFORM_I2C_COUNT];
@@ -57,6 +60,23 @@ void platform_simulated_reset(void)
 
         /* Each simulated bus starts with one BMI160-like device for host tests. */
         device->registers[PLATFORM_SIM_BMI160_REG_CHIP_ID] = PLATFORM_SIM_BMI160_CHIP_ID;
+        /*
+         * Default the simulated IMU to a level, quasistatic pose:
+         * zero gyro and +1 g on the Z accelerometer axis.
+         */
+        device->registers[PLATFORM_SIM_BMI160_REG_GYRO_DATA + 0u] = 0u;
+        device->registers[PLATFORM_SIM_BMI160_REG_GYRO_DATA + 1u] = 0u;
+        device->registers[PLATFORM_SIM_BMI160_REG_GYRO_DATA + 2u] = 0u;
+        device->registers[PLATFORM_SIM_BMI160_REG_GYRO_DATA + 3u] = 0u;
+        device->registers[PLATFORM_SIM_BMI160_REG_GYRO_DATA + 4u] = 0u;
+        device->registers[PLATFORM_SIM_BMI160_REG_GYRO_DATA + 5u] = 0u;
+        device->registers[PLATFORM_SIM_BMI160_REG_ACCEL_DATA + 0u] = 0u;
+        device->registers[PLATFORM_SIM_BMI160_REG_ACCEL_DATA + 1u] = 0u;
+        device->registers[PLATFORM_SIM_BMI160_REG_ACCEL_DATA + 2u] = 0u;
+        device->registers[PLATFORM_SIM_BMI160_REG_ACCEL_DATA + 3u] = 0u;
+        device->registers[PLATFORM_SIM_BMI160_REG_ACCEL_DATA + 4u] = (uint8_t)(PLATFORM_SIM_BMI160_RAW_1G & 0xFFu);
+        device->registers[PLATFORM_SIM_BMI160_REG_ACCEL_DATA + 5u] =
+            (uint8_t)(PLATFORM_SIM_BMI160_RAW_1G >> 8);
     }
 
     for (index = 0; index < PLATFORM_UART_COUNT; ++index) {
