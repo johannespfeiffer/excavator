@@ -150,6 +150,22 @@ static void platform_i2c1_stop(void)
     I2C1->CR1 |= I2C_CR1_STOP_Msk;
 }
 
+static bool platform_i2c1_probe_impl(uint8_t device_address)
+{
+    if (!platform_i2c1_start(true)) {
+        return false;
+    }
+
+    if (!platform_i2c1_send_address((uint8_t)(device_address << 1))) {
+        platform_i2c1_stop();
+        return false;
+    }
+
+    platform_i2c1_clear_addr();
+    platform_i2c1_stop();
+    return true;
+}
+
 static bool platform_i2c1_write_registers_impl(uint8_t device_address,
                                                uint8_t register_address,
                                                const uint8_t *data,
@@ -631,6 +647,31 @@ bool platform_i2c_pinout(platform_i2c_bus_t bus, platform_i2c_pinout_t *pinout)
     pinout->bitrate_hz = k_i2c_configs[bus].bitrate_hz;
 
     return true;
+}
+
+platform_io_status_t platform_i2c_probe_address(platform_i2c_bus_t bus, uint8_t device_address)
+{
+#if defined(EXCAVATOR_TARGET_STM32F446RE)
+    if (bus >= PLATFORM_I2C_COUNT) {
+        return PLATFORM_IO_STATUS_INVALID_ARGUMENT;
+    }
+
+    if ((bus != PLATFORM_I2C1) || !platform_status_ok(g_platform_status) || !platform_i2c_ready(g_platform_status, bus)) {
+        return PLATFORM_IO_STATUS_NOT_READY;
+    }
+
+    return platform_i2c1_probe_impl(device_address) ? PLATFORM_IO_STATUS_OK : PLATFORM_IO_STATUS_NOT_FOUND;
+#else
+    if (bus >= PLATFORM_I2C_COUNT) {
+        return PLATFORM_IO_STATUS_INVALID_ARGUMENT;
+    }
+
+    if (!platform_status_ok(g_platform_status) || !platform_i2c_ready(g_platform_status, bus)) {
+        return PLATFORM_IO_STATUS_NOT_READY;
+    }
+
+    return platform_simulated_i2c_read_registers(bus, device_address, 0u, NULL, 0u);
+#endif
 }
 
 platform_io_status_t platform_i2c_write_registers(platform_i2c_bus_t bus,

@@ -16,6 +16,9 @@ int main(void)
 
     assert(platform_status_ok(platform_init()));
 
+    assert(platform_i2c_probe_address(PLATFORM_I2C_COUNT, 0x68u) == PLATFORM_IO_STATUS_INVALID_ARGUMENT);
+    assert(platform_i2c_probe_address(PLATFORM_I2C1, 0x68u) == PLATFORM_IO_STATUS_OK);
+    assert(platform_i2c_probe_address(PLATFORM_I2C1, 0x69u) == PLATFORM_IO_STATUS_NOT_FOUND);
     assert(platform_i2c_read_registers(PLATFORM_I2C_COUNT, 0x68u, 0x00u, &value, 1u) ==
            PLATFORM_IO_STATUS_INVALID_ARGUMENT);
     assert(platform_i2c_read_registers(PLATFORM_I2C1, 0x42u, 0x00u, &value, 1u) == PLATFORM_IO_STATUS_NOT_FOUND);

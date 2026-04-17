@@ -104,6 +104,7 @@ bool platform_status_ok(platform_status_t status);
 bool platform_uart_ready(platform_status_t status, platform_uart_t uart);
 bool platform_i2c_ready(platform_status_t status, platform_i2c_bus_t bus);
 bool platform_i2c_pinout(platform_i2c_bus_t bus, platform_i2c_pinout_t *pinout);
+platform_io_status_t platform_i2c_probe_address(platform_i2c_bus_t bus, uint8_t device_address);
 platform_io_status_t platform_i2c_write_registers(platform_i2c_bus_t bus,
                                                   uint8_t device_address,
                                                   uint8_t register_address,

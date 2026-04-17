@@ -36,19 +36,28 @@ int app_run(void)
 #if defined(EXCAVATOR_TARGET_STM32F446RE)
     int status_code = 0;
     uint8_t scan_addr;
-    uint8_t scan_dummy;
     char scan_line[48];
     uint16_t scan_len;
     bool scan_found = false;
+    platform_io_status_t probe_68_status;
+    platform_io_status_t probe_69_status;
     uint32_t loop_delay;
 
     /*
      * Bench target for the NUCLEO-F446RE: read S1 on I2C1 and emit repeated
      * plain-ASCII telemetry over USART2/ST-LINK VCP.
      */
+    probe_68_status = platform_i2c_probe_address(PLATFORM_I2C1, 0x68u);
+    probe_69_status = platform_i2c_probe_address(PLATFORM_I2C1, 0x69u);
+    scan_len = (uint16_t)snprintf(scan_line, sizeof(scan_line),
+                                  "i2c_probe: 0x68=%u 0x69=%u\r\n",
+                                  (unsigned int)probe_68_status,
+                                  (unsigned int)probe_69_status);
+    (void)platform_uart_write(PLATFORM_UART_OUTPUT,
+                              (const uint8_t *)scan_line, scan_len);
+
     for (scan_addr = 0x03u; scan_addr <= 0x77u; ++scan_addr) {
-        if (platform_i2c_read_registers(PLATFORM_I2C1, scan_addr, 0x00u,
-                                        &scan_dummy, 1u) == PLATFORM_IO_STATUS_OK) {
+        if (platform_i2c_probe_address(PLATFORM_I2C1, scan_addr) == PLATFORM_IO_STATUS_OK) {
             scan_len = (uint16_t)snprintf(scan_line, sizeof(scan_line),
                                           "i2c_scan: ACK 0x%02X\r\n", scan_addr);
             (void)platform_uart_write(PLATFORM_UART_OUTPUT,
@@ -57,8 +66,12 @@ int app_run(void)
         }
     }
     if (!scan_found) {
+        platform_i2c_debug_t dbg = platform_i2c1_get_debug();
         scan_len = (uint16_t)snprintf(scan_line, sizeof(scan_line),
-                                      "i2c_scan: no device found\r\n");
+                                      "i2c_scan: none step=%lu sr1=0x%04lx sr2=0x%04lx\r\n",
+                                      (unsigned long)dbg.step,
+                                      (unsigned long)dbg.sr1,
+                                      (unsigned long)dbg.sr2);
         (void)platform_uart_write(PLATFORM_UART_OUTPUT,
                                   (const uint8_t *)scan_line, scan_len);
     }
