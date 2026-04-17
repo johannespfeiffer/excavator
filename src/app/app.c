@@ -21,13 +21,14 @@ int app_run(void)
     };
 
     uint8_t index;
+    gps_fix_t gps_fix;
 #endif
     excavator_config_t config = excavator_config_default();
     platform_status_t platform_status = platform_init();
     excavator_state_t state;
     bmi160_sample_t sample = {0};
     char output_line[256];
-    size_t output_length = 0u;
+    size_t output_length;
 
     excavator_state_init(&state, &config);
     excavator_state_set_platform_status(&state, platform_status);
@@ -84,20 +85,17 @@ int app_run(void)
         }
     }
 #else
-    gps_fix_t gps_fix = {0};
-
     if (!platform_status_ok(platform_status)) {
         return 1;
     }
 
+    /* Init all four sensors and capture an initial sample for zero-pose calibration. */
     for (index = 0u; index < EXCAVATOR_SENSOR_COUNT; ++index) {
-        const platform_i2c_bus_t bus = k_sensor_buses[index];
-
-        if (bmi160_init(bus) != BMI160_STATUS_OK) {
+        if (bmi160_init(k_sensor_buses[index]) != BMI160_STATUS_OK) {
             return 2;
         }
 
-        if (bmi160_read_sample(bus, &sample) != BMI160_STATUS_OK) {
+        if (bmi160_read_sample(k_sensor_buses[index], &sample) != BMI160_STATUS_OK) {
             return 3;
         }
 
@@ -107,22 +105,27 @@ int app_run(void)
     }
 
     (void)excavator_state_calibrate_zero_pose(&state);
-
-    if (!excavator_state_estimate_orientation_quasistatic(&state)) {
-        return 5;
-    }
-
     gps_parser_reset();
-    if (gps_parser_poll_uart(&gps_fix)) {
-        excavator_state_set_gps_fix(&state, &gps_fix);
-    }
 
-    (void)excavator_state_update_result(&state);
-    output_length = telemetry_format_status_line(&state, output_line, sizeof(output_line));
-    if (output_length > 0u) {
-        (void)platform_uart_write(PLATFORM_UART_OUTPUT, (const uint8_t *)output_line, (uint16_t)output_length);
-    }
+    for (;;) {
+        for (index = 0u; index < EXCAVATOR_SENSOR_COUNT; ++index) {
+            if (bmi160_read_sample(k_sensor_buses[index], &sample) == BMI160_STATUS_OK) {
+                (void)excavator_state_set_imu_sample(&state, (excavator_sensor_id_t)index, &sample);
+            }
+        }
 
-    return 0;
+        (void)excavator_state_estimate_orientation_quasistatic(&state);
+
+        gps_fix = (gps_fix_t){0};
+        if (gps_parser_poll_uart(&gps_fix)) {
+            excavator_state_set_gps_fix(&state, &gps_fix);
+        }
+
+        (void)excavator_state_update_result(&state);
+        output_length = telemetry_format_status_line(&state, output_line, sizeof(output_line));
+        if (output_length > 0u) {
+            (void)platform_uart_write(PLATFORM_UART_OUTPUT, (const uint8_t *)output_line, (uint16_t)output_length);
+        }
+    }
 #endif
 }
