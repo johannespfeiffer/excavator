@@ -7,6 +7,8 @@
 #include "platform.h"
 #include "telemetry.h"
 
+#include <stdio.h>
+
 int app_run(void)
 {
 #if !defined(EXCAVATOR_TARGET_STM32F446RE)
@@ -30,27 +32,63 @@ int app_run(void)
     excavator_state_init(&state, &config);
     excavator_state_set_platform_status(&state, platform_status);
 
+#if defined(EXCAVATOR_TARGET_STM32F446RE)
+    int status_code = 0;
+    uint32_t loop_delay;
+
+    /*
+     * Bench target for the NUCLEO-F446RE: read S1 on I2C1 and emit repeated
+     * plain-ASCII telemetry over USART2/ST-LINK VCP.
+     */
+    for (;;) {
+        bmi160_status_t read_status = BMI160_STATUS_OK;
+
+        status_code = 0;
+
+        if (!platform_status_ok(state.platform_status)) {
+            status_code = 1;
+        } else if (bmi160_init(PLATFORM_I2C1) != BMI160_STATUS_OK) {
+            status_code = 2;
+        } else if ((read_status = bmi160_read_sample(PLATFORM_I2C1, &sample)) != BMI160_STATUS_OK) {
+            status_code = 3;
+        } else if (!excavator_state_set_imu_sample(&state, EXCAVATOR_SENSOR_S1, &sample)) {
+            status_code = 4;
+        }
+
+        if (status_code == 0) {
+            state.estimation.valid = true;
+            state.estimation.orientation.s1_angle_rad =
+                orientation_quasistatic_angle_from_accel(
+                    &sample, config.sensor_mounts[EXCAVATOR_SENSOR_S1].angle_offset_rad);
+        }
+
+        output_length = (size_t)snprintf(output_line,
+                                         sizeof(output_line),
+                                         "bench=s1 status=%d platform_ok=%u i2c1=%u read=%u s1_mdeg=%ld ax=%ld ay=%ld az=%ld\r\n",
+                                         status_code,
+                                         platform_status_ok(state.platform_status) ? 1u : 0u,
+                                         platform_i2c_ready(state.platform_status, PLATFORM_I2C1) ? 1u : 0u,
+                                         (status_code == 0) ? 1u : 0u,
+                                         (long)(state.estimation.orientation.s1_angle_rad * 1000.0f),
+                                         (long)(sample.accel_x_mps2 * 1000.0f),
+                                         (long)(sample.accel_y_mps2 * 1000.0f),
+                                         (long)(sample.accel_z_mps2 * 1000.0f));
+        if ((output_length > 0u) && (output_length < sizeof(output_line))) {
+            (void)platform_uart_write(PLATFORM_UART_OUTPUT,
+                                      (const uint8_t *)output_line,
+                                      (uint16_t)output_length);
+        }
+
+        for (loop_delay = 0u; loop_delay < 1600000u; ++loop_delay) {
+            __asm__ volatile ("nop");
+        }
+    }
+#else
+    gps_fix_t gps_fix = {0};
+
     if (!platform_status_ok(platform_status)) {
         return 1;
     }
-
-#if defined(EXCAVATOR_TARGET_STM32F446RE)
-    /*
-     * Current hardware bench target: bring up the real S1 BMI160 on I2C1 and
-     * verify one coherent sample can be read. The remaining sensors and GPS
-     * path are still host-side/simulated work.
-     */
-    if (bmi160_init(PLATFORM_I2C1) != BMI160_STATUS_OK) {
-        return 2;
-    }
-
-    if (bmi160_read_sample(PLATFORM_I2C1, &sample) != BMI160_STATUS_OK) {
-        return 3;
-    }
-
-    return excavator_state_set_imu_sample(&state, EXCAVATOR_SENSOR_S1, &sample) ? 0 : 4;
-#else
-    gps_fix_t gps_fix = {0};
 
     for (index = 0u; index < EXCAVATOR_SENSOR_COUNT; ++index) {
         const platform_i2c_bus_t bus = k_sensor_buses[index];

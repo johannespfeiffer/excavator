@@ -57,7 +57,15 @@ if(EXCAVATOR_ENABLE_TARGET)
     add_executable(excavator_firmware.elf
         src/platform/startup_placeholder.c
     )
-    target_link_libraries(excavator_firmware.elf PRIVATE excavator_core)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+        target_link_libraries(excavator_firmware.elf PRIVATE
+            -Wl,--start-group
+            excavator_core
+            -Wl,--end-group
+        )
+    else()
+        target_link_libraries(excavator_firmware.elf PRIVATE excavator_core)
+    endif()
     target_compile_definitions(excavator_firmware.elf PRIVATE EXCAVATOR_TARGET_STM32F446RE=1)
 
     if(CMAKE_C_COMPILER_ID MATCHES "GNU")
@@ -69,6 +77,8 @@ if(EXCAVATOR_ENABLE_TARGET)
             -ffreestanding
         )
         target_link_options(excavator_firmware.elf PRIVATE
+            -specs=nano.specs
+            -specs=nosys.specs
             -T${CMAKE_CURRENT_SOURCE_DIR}/linker/stm32f446re.ld
             -Wl,--gc-sections
             -Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/excavator_firmware.map

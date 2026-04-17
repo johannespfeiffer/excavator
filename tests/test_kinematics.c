@@ -9,6 +9,8 @@ static int float_close(float a, float b, float tolerance)
     return diff <= tolerance;
 }
 
+static const float k_pi = 3.14159265358979323846f;
+
 int main(void)
 {
     const excavator_geometry_t geometry = {
@@ -33,7 +35,7 @@ int main(void)
 
     {
         const orientation_estimate_t raised = {
-            .s1_angle_rad = (float)M_PI / 2.0f,
+            .s1_angle_rad = k_pi / 2.0f,
             .s2_angle_rad = 0.0f,
             .s3_angle_rad = 0.0f,
             .s4_angle_rad = 0.0f,
@@ -48,9 +50,9 @@ int main(void)
     {
         const orientation_estimate_t mixed = {
             .s1_angle_rad = 0.0f,
-            .s2_angle_rad = (float)M_PI / 6.0f,
-            .s3_angle_rad = -(float)M_PI / 2.0f,
-            .s4_angle_rad = (float)M_PI / 2.0f,
+            .s2_angle_rad = k_pi / 6.0f,
+            .s3_angle_rad = -k_pi / 2.0f,
+            .s4_angle_rad = k_pi / 2.0f,
         };
         const bucket_height_result_t mixed_result =
             kinematics_calculate_bucket_height(&geometry, &mixed, &gps_fix);

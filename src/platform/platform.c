@@ -25,16 +25,15 @@ static const platform_i2c_config_t k_i2c_configs[PLATFORM_I2C_COUNT] = {
     { PLATFORM_FMPI2C1, { PLATFORM_GPIO_PORT_C, 6u }, { PLATFORM_GPIO_PORT_C, 7u }, 400000u },
 };
 
-#if !defined(EXCAVATOR_TARGET_STM32F446RE)
 /*
- * GPS and output UART defaults are placeholders until the concrete serial
- * protocols are fixed in the hardware integration step.
+ * Target assumption for bench logging:
+ * PLATFORM_UART_OUTPUT uses USART2 TX on PA2 at 115200 baud, which matches
+ * the common Nucleo/ST-LINK VCP wiring.
  */
 static const platform_uart_config_t k_uart_configs[PLATFORM_UART_COUNT] = {
     { PLATFORM_UART_GPS, 115200u, true, false },
     { PLATFORM_UART_OUTPUT, 115200u, false, true },
 };
-#endif
 
 static platform_status_t g_platform_status = {
     .backend = PLATFORM_BACKEND_SIMULATED,
@@ -48,12 +47,21 @@ enum {
     RCC_AHB1ENR_OFFSET = 0x30u,
     RCC_APB1RSTR_OFFSET = 0x20u,
     RCC_APB1ENR_OFFSET = 0x40u,
+    GPIOA_BASE = 0x40020000u,
     GPIOB_BASE = 0x40020400u,
     GPIO_MODER_OFFSET = 0x00u,
     GPIO_OTYPER_OFFSET = 0x04u,
     GPIO_OSPEEDR_OFFSET = 0x08u,
     GPIO_PUPDR_OFFSET = 0x0Cu,
+    GPIO_AFRL_OFFSET = 0x20u,
     GPIO_AFRH_OFFSET = 0x24u,
+    USART2_BASE = 0x40004400u,
+    USART_SR_OFFSET = 0x00u,
+    USART_DR_OFFSET = 0x04u,
+    USART_BRR_OFFSET = 0x08u,
+    USART_CR1_OFFSET = 0x0Cu,
+    USART_CR2_OFFSET = 0x10u,
+    USART_CR3_OFFSET = 0x14u,
     I2C1_BASE = 0x40005400u,
     I2C_CR1_OFFSET = 0x00u,
     I2C_CR2_OFFSET = 0x04u,
@@ -65,9 +73,15 @@ enum {
 };
 
 enum {
+    RCC_AHB1ENR_GPIOAEN = 1u << 0,
     RCC_AHB1ENR_GPIOBEN = 1u << 1,
+    RCC_APB1RSTR_USART2RST = 1u << 17,
+    RCC_APB1ENR_USART2EN = 1u << 17,
     RCC_APB1RSTR_I2C1RST = 1u << 21,
     RCC_APB1ENR_I2C1EN = 1u << 21,
+    USART_SR_TXE = 1u << 7,
+    USART_CR1_UE = 1u << 13,
+    USART_CR1_TE = 1u << 3,
     I2C_CR1_PE = 1u << 0,
     I2C_CR1_START = 1u << 8,
     I2C_CR1_STOP = 1u << 9,
@@ -349,6 +363,71 @@ static bool platform_target_i2c1_init(const platform_i2c_config_t *config)
 
     return true;
 }
+
+static bool platform_target_uart_output_init(const platform_uart_config_t *config)
+{
+    volatile uint32_t *const rcc_ahb1enr = platform_reg32(RCC_BASE + RCC_AHB1ENR_OFFSET);
+    volatile uint32_t *const rcc_apb1rstr = platform_reg32(RCC_BASE + RCC_APB1RSTR_OFFSET);
+    volatile uint32_t *const rcc_apb1enr = platform_reg32(RCC_BASE + RCC_APB1ENR_OFFSET);
+    volatile uint32_t *const gpioa_moder = platform_reg32(GPIOA_BASE + GPIO_MODER_OFFSET);
+    volatile uint32_t *const gpioa_otyper = platform_reg32(GPIOA_BASE + GPIO_OTYPER_OFFSET);
+    volatile uint32_t *const gpioa_ospeedr = platform_reg32(GPIOA_BASE + GPIO_OSPEEDR_OFFSET);
+    volatile uint32_t *const gpioa_pupdr = platform_reg32(GPIOA_BASE + GPIO_PUPDR_OFFSET);
+    volatile uint32_t *const gpioa_afrl = platform_reg32(GPIOA_BASE + GPIO_AFRL_OFFSET);
+    volatile uint32_t *const usart2_brr = platform_reg32(USART2_BASE + USART_BRR_OFFSET);
+    volatile uint32_t *const usart2_cr1 = platform_reg32(USART2_BASE + USART_CR1_OFFSET);
+    volatile uint32_t *const usart2_cr2 = platform_reg32(USART2_BASE + USART_CR2_OFFSET);
+    volatile uint32_t *const usart2_cr3 = platform_reg32(USART2_BASE + USART_CR3_OFFSET);
+    const uint32_t tx_pin = 2u;
+
+    if ((config == NULL) || (config->uart != PLATFORM_UART_OUTPUT) || !config->tx_enabled ||
+        (config->baud_rate != 115200u)) {
+        return false;
+    }
+
+    *rcc_ahb1enr |= RCC_AHB1ENR_GPIOAEN;
+    (void)*rcc_ahb1enr;
+
+    *gpioa_moder &= ~(3u << (tx_pin * 2u));
+    *gpioa_moder |= 2u << (tx_pin * 2u);
+    *gpioa_otyper &= ~(1u << tx_pin);
+    *gpioa_ospeedr &= ~(3u << (tx_pin * 2u));
+    *gpioa_ospeedr |= 2u << (tx_pin * 2u);
+    *gpioa_pupdr &= ~(3u << (tx_pin * 2u));
+    *gpioa_afrl &= ~(0xFu << (tx_pin * 4u));
+    *gpioa_afrl |= 7u << (tx_pin * 4u);
+
+    *rcc_apb1enr |= RCC_APB1ENR_USART2EN;
+    *rcc_apb1rstr |= RCC_APB1RSTR_USART2RST;
+    *rcc_apb1rstr &= ~RCC_APB1RSTR_USART2RST;
+
+    *usart2_cr1 = 0u;
+    *usart2_cr2 = 0u;
+    *usart2_cr3 = 0u;
+    *usart2_brr = 0x008Bu;
+    *usart2_cr1 = USART_CR1_UE | USART_CR1_TE;
+
+    return true;
+}
+
+static platform_io_status_t platform_target_uart_output_write(const uint8_t *data, uint16_t length)
+{
+    uint16_t index;
+
+    if ((length > 0u) && (data == NULL)) {
+        return PLATFORM_IO_STATUS_INVALID_ARGUMENT;
+    }
+
+    for (index = 0u; index < length; ++index) {
+        if (!platform_wait_for_reg_bits(USART2_BASE + USART_SR_OFFSET, USART_SR_TXE, true)) {
+            return PLATFORM_IO_STATUS_NOT_READY;
+        }
+
+        *platform_reg32(USART2_BASE + USART_DR_OFFSET) = data[index];
+    }
+
+    return PLATFORM_IO_STATUS_OK;
+}
 #endif
 
 static platform_backend_t platform_detect_backend(void)
@@ -365,6 +444,7 @@ static uint32_t platform_required_ready_mask(void)
 #if defined(EXCAVATOR_TARGET_STM32F446RE)
     return PLATFORM_READY_CLOCK |
            PLATFORM_READY_GPIO |
+           PLATFORM_READY_UART_OUTPUT |
            PLATFORM_READY_I2C1 |
            PLATFORM_READY_SELF_TEST;
 #else
@@ -431,7 +511,31 @@ static void platform_init_gpio(platform_status_t *status)
 static void platform_init_uarts(platform_status_t *status)
 {
 #if defined(EXCAVATOR_TARGET_STM32F446RE)
-    (void)status;
+    size_t index;
+
+    if (status == NULL) {
+        return;
+    }
+
+    for (index = 0; index < PLATFORM_UART_COUNT; ++index) {
+        const platform_uart_config_t *config = &k_uart_configs[index];
+
+        if ((config->rx_enabled == config->tx_enabled) || (config->baud_rate == 0u)) {
+            status->error_flags |= PLATFORM_ERROR_UART_CONFIG;
+            continue;
+        }
+
+        if (config->uart != PLATFORM_UART_OUTPUT) {
+            continue;
+        }
+
+        if (!platform_target_uart_output_init(config)) {
+            status->error_flags |= PLATFORM_ERROR_UART_CONFIG;
+            continue;
+        }
+
+        status->ready_flags |= platform_uart_ready_flag(config->uart);
+    }
 #else
     size_t index;
 
@@ -650,10 +754,15 @@ platform_io_status_t platform_uart_read_byte(platform_uart_t uart, uint8_t *byte
 platform_io_status_t platform_uart_write(platform_uart_t uart, const uint8_t *data, uint16_t length)
 {
 #if defined(EXCAVATOR_TARGET_STM32F446RE)
-    (void)uart;
-    (void)data;
-    (void)length;
-    return PLATFORM_IO_STATUS_NOT_IMPLEMENTED;
+    if ((uart >= PLATFORM_UART_COUNT) || ((length > 0u) && (data == NULL))) {
+        return PLATFORM_IO_STATUS_INVALID_ARGUMENT;
+    }
+
+    if ((uart != PLATFORM_UART_OUTPUT) || !platform_status_ok(g_platform_status) || !platform_uart_ready(g_platform_status, uart)) {
+        return PLATFORM_IO_STATUS_NOT_READY;
+    }
+
+    return platform_target_uart_output_write(data, length);
 #else
     if ((uart >= PLATFORM_UART_COUNT) || ((length > 0u) && (data == NULL))) {
         return PLATFORM_IO_STATUS_INVALID_ARGUMENT;
