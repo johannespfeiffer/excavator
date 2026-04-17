@@ -16,7 +16,7 @@ typedef enum {
     EXCAVATOR_SENSOR_S2 = 1,
     EXCAVATOR_SENSOR_S3 = 2,
     EXCAVATOR_SENSOR_S4 = 3,
-    EXCAVATOR_SENSOR_COUNT = 4,
+    EXCAVATOR_SENSOR_COUNT = EXCAVATOR_IMU_COUNT,
 } excavator_sensor_id_t;
 
 typedef struct {
@@ -55,6 +55,7 @@ bool excavator_state_set_imu_sample(excavator_state_t *state,
 void excavator_state_set_gps_fix(excavator_state_t *state, const gps_fix_t *fix);
 void excavator_state_set_orientation(excavator_state_t *state, const orientation_estimate_t *orientation);
 void excavator_state_set_platform_status(excavator_state_t *state, platform_status_t status);
+bool excavator_state_estimate_orientation_quasistatic(excavator_state_t *state);
 bool excavator_state_update_result(excavator_state_t *state);
 bool excavator_state_inputs_ready(const excavator_state_t *state);
 

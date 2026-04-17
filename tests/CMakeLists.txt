@@ -7,6 +7,15 @@ target_compile_options(excavator_math_tests PRIVATE -Wall -Wextra -Wpedantic)
 
 add_test(NAME excavator_math_tests COMMAND $<TARGET_FILE:excavator_math_tests>)
 
+add_executable(excavator_orientation_tests
+    test_orientation.c
+)
+
+target_link_libraries(excavator_orientation_tests PRIVATE excavator_core)
+target_compile_options(excavator_orientation_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+add_test(NAME excavator_orientation_tests COMMAND $<TARGET_FILE:excavator_orientation_tests>)
+
 add_executable(excavator_app_tests
     test_app.c
 )

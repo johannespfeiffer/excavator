@@ -10,6 +10,16 @@ excavator_config_t excavator_config_default(void)
             .l4_m = 0.0f,
             .o1_m = 0.0f,
         },
+        .sensor_mounts = {
+            { .angle_offset_rad = 0.0f },
+            { .angle_offset_rad = 0.0f },
+            { .angle_offset_rad = 0.0f },
+            { .angle_offset_rad = 0.0f },
+        },
+        .quasistatic_filter = {
+            .min_magnitude_mps2 = 7.5f,
+            .max_magnitude_mps2 = 12.0f,
+        },
     };
 
     return config;

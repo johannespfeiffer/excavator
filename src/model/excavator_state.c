@@ -35,7 +35,7 @@ void excavator_state_init(excavator_state_t *state, const excavator_config_t *co
             .altitude_m = 0.0f,
         },
         .estimation = {
-            .valid = true,
+            .valid = false,
             .orientation = orientation_estimate_level(),
         },
         .result = {
@@ -106,6 +106,46 @@ void excavator_state_set_platform_status(excavator_state_t *state, platform_stat
     }
 
     state->platform_status = status;
+}
+
+bool excavator_state_estimate_orientation_quasistatic(excavator_state_t *state)
+{
+    orientation_estimate_t orientation;
+
+    if (state == 0) {
+        return false;
+    }
+
+    if (!state->raw.valid[EXCAVATOR_SENSOR_S1] ||
+        !state->raw.valid[EXCAVATOR_SENSOR_S2] ||
+        !state->raw.valid[EXCAVATOR_SENSOR_S3] ||
+        !state->raw.valid[EXCAVATOR_SENSOR_S4]) {
+        state->estimation.valid = false;
+        return false;
+    }
+
+    if (!orientation_quasistatic_sample_valid(&state->raw.imu[EXCAVATOR_SENSOR_S1], &state->config.quasistatic_filter) ||
+        !orientation_quasistatic_sample_valid(&state->raw.imu[EXCAVATOR_SENSOR_S2], &state->config.quasistatic_filter) ||
+        !orientation_quasistatic_sample_valid(&state->raw.imu[EXCAVATOR_SENSOR_S3], &state->config.quasistatic_filter) ||
+        !orientation_quasistatic_sample_valid(&state->raw.imu[EXCAVATOR_SENSOR_S4], &state->config.quasistatic_filter)) {
+        state->estimation.valid = false;
+        return false;
+    }
+
+    orientation = (orientation_estimate_t){
+        .s1_angle_rad = orientation_quasistatic_angle_from_accel(
+            &state->raw.imu[EXCAVATOR_SENSOR_S1], state->config.sensor_mounts[EXCAVATOR_SENSOR_S1].angle_offset_rad),
+        .s2_angle_rad = orientation_quasistatic_angle_from_accel(
+            &state->raw.imu[EXCAVATOR_SENSOR_S2], state->config.sensor_mounts[EXCAVATOR_SENSOR_S2].angle_offset_rad),
+        .s3_angle_rad = orientation_quasistatic_angle_from_accel(
+            &state->raw.imu[EXCAVATOR_SENSOR_S3], state->config.sensor_mounts[EXCAVATOR_SENSOR_S3].angle_offset_rad),
+        .s4_angle_rad = orientation_quasistatic_angle_from_accel(
+            &state->raw.imu[EXCAVATOR_SENSOR_S4], state->config.sensor_mounts[EXCAVATOR_SENSOR_S4].angle_offset_rad),
+    };
+
+    state->estimation.valid = true;
+    state->estimation.orientation = orientation;
+    return true;
 }
 
 bool excavator_state_update_result(excavator_state_t *state)

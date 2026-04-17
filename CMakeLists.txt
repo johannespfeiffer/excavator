@@ -36,6 +36,9 @@ set(EXCAVATOR_COMMON_INCLUDES
 add_library(excavator_core STATIC ${EXCAVATOR_COMMON_SOURCES})
 target_include_directories(excavator_core PUBLIC ${EXCAVATOR_COMMON_INCLUDES})
 target_compile_options(excavator_core PRIVATE -Wall -Wextra -Wpedantic)
+if(NOT MSVC)
+    target_link_libraries(excavator_core PUBLIC m)
+endif()
 
 if(EXCAVATOR_ENABLE_TARGET)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU")

@@ -3,6 +3,10 @@
 
 #include <stdbool.h>
 
+enum {
+    EXCAVATOR_IMU_COUNT = 4,
+};
+
 typedef struct {
     float l1_m;
     float l2_m;
@@ -12,7 +16,18 @@ typedef struct {
 } excavator_geometry_t;
 
 typedef struct {
+    float angle_offset_rad;
+} excavator_sensor_mount_t;
+
+typedef struct {
+    float min_magnitude_mps2;
+    float max_magnitude_mps2;
+} excavator_quasistatic_filter_t;
+
+typedef struct {
     excavator_geometry_t geometry;
+    excavator_sensor_mount_t sensor_mounts[EXCAVATOR_IMU_COUNT];
+    excavator_quasistatic_filter_t quasistatic_filter;
 } excavator_config_t;
 
 excavator_config_t excavator_config_default(void);
