@@ -43,6 +43,32 @@ if(NOT MSVC)
 endif()
 
 if(EXCAVATOR_ENABLE_TARGET)
+    include(FetchContent)
+
+    FetchContent_Declare(
+        cmsis5
+        GIT_REPOSITORY https://github.com/ARM-software/CMSIS_5.git
+        GIT_TAG        5.9.0
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_Declare(
+        cmsis_device_f4
+        GIT_REPOSITORY https://github.com/STMicroelectronics/cmsis-device-f4.git
+        GIT_TAG        v2.6.9
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_MakeAvailable(cmsis5 cmsis_device_f4)
+
+    add_library(cmsis_stm32f446 INTERFACE)
+    target_include_directories(cmsis_stm32f446 INTERFACE
+        ${cmsis5_SOURCE_DIR}/CMSIS/Core/Include
+        ${cmsis_device_f4_SOURCE_DIR}/Include
+    )
+    target_compile_definitions(cmsis_stm32f446 INTERFACE STM32F446xx)
+
+    # PRIVATE: CMSIS types are only needed inside platform.c, not by callers.
+    target_link_libraries(excavator_core PRIVATE cmsis_stm32f446)
+
     if(CMAKE_C_COMPILER_ID MATCHES "GNU")
         target_compile_options(excavator_core PRIVATE
             -mcpu=cortex-m4

@@ -20,7 +20,7 @@ typedef struct {
 
 static const platform_i2c_config_t k_i2c_configs[PLATFORM_I2C_COUNT] = {
     { PLATFORM_I2C1, { PLATFORM_GPIO_PORT_B, 8u }, { PLATFORM_GPIO_PORT_B, 9u }, 400000u },
-    { PLATFORM_I2C2, { PLATFORM_GPIO_PORT_B, 10u }, { PLATFORM_GPIO_PORT_B, 3u }, 400000u },
+    { PLATFORM_I2C2, { PLATFORM_GPIO_PORT_B, 10u }, { PLATFORM_GPIO_PORT_C, 12u }, 400000u },
     { PLATFORM_I2C3, { PLATFORM_GPIO_PORT_A, 8u }, { PLATFORM_GPIO_PORT_C, 9u }, 400000u },
     { PLATFORM_FMPI2C1, { PLATFORM_GPIO_PORT_C, 6u }, { PLATFORM_GPIO_PORT_C, 7u }, 400000u },
 };
@@ -42,73 +42,18 @@ static platform_status_t g_platform_status = {
 };
 
 #if defined(EXCAVATOR_TARGET_STM32F446RE)
-enum {
-    RCC_BASE = 0x40023800u,
-    RCC_AHB1ENR_OFFSET = 0x30u,
-    RCC_APB1RSTR_OFFSET = 0x20u,
-    RCC_APB1ENR_OFFSET = 0x40u,
-    GPIOA_BASE = 0x40020000u,
-    GPIOB_BASE = 0x40020400u,
-    GPIO_MODER_OFFSET = 0x00u,
-    GPIO_OTYPER_OFFSET = 0x04u,
-    GPIO_OSPEEDR_OFFSET = 0x08u,
-    GPIO_PUPDR_OFFSET = 0x0Cu,
-    GPIO_AFRL_OFFSET = 0x20u,
-    GPIO_AFRH_OFFSET = 0x24u,
-    USART2_BASE = 0x40004400u,
-    USART_SR_OFFSET = 0x00u,
-    USART_DR_OFFSET = 0x04u,
-    USART_BRR_OFFSET = 0x08u,
-    USART_CR1_OFFSET = 0x0Cu,
-    USART_CR2_OFFSET = 0x10u,
-    USART_CR3_OFFSET = 0x14u,
-    I2C1_BASE = 0x40005400u,
-    I2C_CR1_OFFSET = 0x00u,
-    I2C_CR2_OFFSET = 0x04u,
-    I2C_DR_OFFSET = 0x10u,
-    I2C_SR1_OFFSET = 0x14u,
-    I2C_SR2_OFFSET = 0x18u,
-    I2C_CCR_OFFSET = 0x1Cu,
-    I2C_TRISE_OFFSET = 0x20u,
-};
+#include <stm32f446xx.h>
 
 enum {
-    RCC_AHB1ENR_GPIOAEN = 1u << 0,
-    RCC_AHB1ENR_GPIOBEN = 1u << 1,
-    RCC_APB1RSTR_USART2RST = 1u << 17,
-    RCC_APB1ENR_USART2EN = 1u << 17,
-    RCC_APB1RSTR_I2C1RST = 1u << 21,
-    RCC_APB1ENR_I2C1EN = 1u << 21,
-    USART_SR_TXE = 1u << 7,
-    USART_CR1_UE = 1u << 13,
-    USART_CR1_TE = 1u << 3,
-    I2C_CR1_PE = 1u << 0,
-    I2C_CR1_START = 1u << 8,
-    I2C_CR1_STOP = 1u << 9,
-    I2C_CR1_ACK = 1u << 10,
-    I2C_CR1_SWRST = 1u << 15,
-    I2C_SR1_SB = 1u << 0,
-    I2C_SR1_ADDR = 1u << 1,
-    I2C_SR1_BTF = 1u << 2,
-    I2C_SR1_RXNE = 1u << 6,
-    I2C_SR1_TXE = 1u << 7,
-    I2C_SR1_AF = 1u << 10,
-    I2C_SR2_BUSY = 1u << 1,
-    I2C_CCR_FS = 1u << 15,
     PLATFORM_I2C_TIMEOUT = 1000000u,
 };
 
-static volatile uint32_t *platform_reg32(uint32_t address)
-{
-    return (volatile uint32_t *)address;
-}
-
-static bool platform_wait_for_reg_bits(uint32_t address, uint32_t mask, bool set)
+static bool platform_wait_for_reg_bits(volatile uint32_t *reg, uint32_t mask, bool set)
 {
     uint32_t attempt;
 
     for (attempt = 0u; attempt < PLATFORM_I2C_TIMEOUT; ++attempt) {
-        const uint32_t value = *platform_reg32(address);
+        const uint32_t value = *reg;
 
         if (set ? ((value & mask) == mask) : ((value & mask) == 0u)) {
             return true;
@@ -122,42 +67,40 @@ static void platform_i2c1_clear_addr(void)
 {
     volatile uint32_t discard;
 
-    discard = *platform_reg32(I2C1_BASE + I2C_SR1_OFFSET);
-    discard = *platform_reg32(I2C1_BASE + I2C_SR2_OFFSET);
+    discard = I2C1->SR1;
+    discard = I2C1->SR2;
     (void)discard;
 }
 
 static void platform_i2c1_clear_ack_failure(void)
 {
-    *platform_reg32(I2C1_BASE + I2C_SR1_OFFSET) &= ~I2C_SR1_AF;
+    I2C1->SR1 &= ~I2C_SR1_AF_Msk;
 }
 
 static bool platform_i2c1_start(void)
 {
-    volatile uint32_t *const cr1 = platform_reg32(I2C1_BASE + I2C_CR1_OFFSET);
-
-    if (!platform_wait_for_reg_bits(I2C1_BASE + I2C_SR2_OFFSET, I2C_SR2_BUSY, false)) {
+    if (!platform_wait_for_reg_bits(&I2C1->SR2, I2C_SR2_BUSY_Msk, false)) {
         return false;
     }
 
-    *cr1 |= I2C_CR1_START;
-    return platform_wait_for_reg_bits(I2C1_BASE + I2C_SR1_OFFSET, I2C_SR1_SB, true);
+    I2C1->CR1 |= I2C_CR1_START_Msk;
+    return platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_SB_Msk, true);
 }
 
 static bool platform_i2c1_send_address(uint8_t address_byte)
 {
     uint32_t attempt;
 
-    *platform_reg32(I2C1_BASE + I2C_DR_OFFSET) = address_byte;
+    I2C1->DR = address_byte;
 
     for (attempt = 0u; attempt < PLATFORM_I2C_TIMEOUT; ++attempt) {
-        const uint32_t sr1 = *platform_reg32(I2C1_BASE + I2C_SR1_OFFSET);
+        const uint32_t sr1 = I2C1->SR1;
 
-        if ((sr1 & I2C_SR1_ADDR) != 0u) {
+        if ((sr1 & I2C_SR1_ADDR_Msk) != 0u) {
             return true;
         }
 
-        if ((sr1 & I2C_SR1_AF) != 0u) {
+        if ((sr1 & I2C_SR1_AF_Msk) != 0u) {
             platform_i2c1_clear_ack_failure();
             return false;
         }
@@ -168,17 +111,17 @@ static bool platform_i2c1_send_address(uint8_t address_byte)
 
 static bool platform_i2c1_write_byte(uint8_t value)
 {
-    if (!platform_wait_for_reg_bits(I2C1_BASE + I2C_SR1_OFFSET, I2C_SR1_TXE, true)) {
+    if (!platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_TXE_Msk, true)) {
         return false;
     }
 
-    *platform_reg32(I2C1_BASE + I2C_DR_OFFSET) = value;
-    return platform_wait_for_reg_bits(I2C1_BASE + I2C_SR1_OFFSET, I2C_SR1_BTF, true);
+    I2C1->DR = value;
+    return platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_BTF_Msk, true);
 }
 
 static void platform_i2c1_stop(void)
 {
-    *platform_reg32(I2C1_BASE + I2C_CR1_OFFSET) |= I2C_CR1_STOP;
+    I2C1->CR1 |= I2C_CR1_STOP_Msk;
 }
 
 static bool platform_i2c1_write_registers_impl(uint8_t device_address,
@@ -217,66 +160,63 @@ static bool platform_i2c1_write_registers_impl(uint8_t device_address,
 
 static bool platform_i2c1_read_one(uint8_t *data)
 {
-    volatile uint32_t *const cr1 = platform_reg32(I2C1_BASE + I2C_CR1_OFFSET);
-
-    *cr1 &= ~I2C_CR1_ACK;
+    I2C1->CR1 &= ~I2C_CR1_ACK_Msk;
     platform_i2c1_clear_addr();
     platform_i2c1_stop();
 
-    if (!platform_wait_for_reg_bits(I2C1_BASE + I2C_SR1_OFFSET, I2C_SR1_RXNE, true)) {
-        *cr1 |= I2C_CR1_ACK;
+    if (!platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_RXNE_Msk, true)) {
+        I2C1->CR1 |= I2C_CR1_ACK_Msk;
         return false;
     }
 
-    *data = (uint8_t)(*platform_reg32(I2C1_BASE + I2C_DR_OFFSET) & 0xFFu);
-    *cr1 |= I2C_CR1_ACK;
+    *data = (uint8_t)(I2C1->DR & 0xFFu);
+    I2C1->CR1 |= I2C_CR1_ACK_Msk;
     return true;
 }
 
 static bool platform_i2c1_read_many(uint8_t *data, uint16_t length)
 {
-    volatile uint32_t *const cr1 = platform_reg32(I2C1_BASE + I2C_CR1_OFFSET);
     uint16_t remaining = length;
 
-    *cr1 |= I2C_CR1_ACK;
+    I2C1->CR1 |= I2C_CR1_ACK_Msk;
     platform_i2c1_clear_addr();
 
     while (remaining > 3u) {
-        if (!platform_wait_for_reg_bits(I2C1_BASE + I2C_SR1_OFFSET, I2C_SR1_RXNE, true)) {
+        if (!platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_RXNE_Msk, true)) {
             platform_i2c1_stop();
             return false;
         }
 
-        *data++ = (uint8_t)(*platform_reg32(I2C1_BASE + I2C_DR_OFFSET) & 0xFFu);
+        *data++ = (uint8_t)(I2C1->DR & 0xFFu);
         remaining--;
     }
 
-    if (!platform_wait_for_reg_bits(I2C1_BASE + I2C_SR1_OFFSET, I2C_SR1_BTF, true)) {
+    if (!platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_BTF_Msk, true)) {
         platform_i2c1_stop();
         return false;
     }
 
-    *cr1 &= ~I2C_CR1_ACK;
-    *data++ = (uint8_t)(*platform_reg32(I2C1_BASE + I2C_DR_OFFSET) & 0xFFu);
+    I2C1->CR1 &= ~I2C_CR1_ACK_Msk;
+    *data++ = (uint8_t)(I2C1->DR & 0xFFu);
     remaining--;
 
-    if (!platform_wait_for_reg_bits(I2C1_BASE + I2C_SR1_OFFSET, I2C_SR1_BTF, true)) {
+    if (!platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_BTF_Msk, true)) {
         platform_i2c1_stop();
-        *cr1 |= I2C_CR1_ACK;
+        I2C1->CR1 |= I2C_CR1_ACK_Msk;
         return false;
     }
 
     platform_i2c1_stop();
-    *data++ = (uint8_t)(*platform_reg32(I2C1_BASE + I2C_DR_OFFSET) & 0xFFu);
+    *data++ = (uint8_t)(I2C1->DR & 0xFFu);
     remaining--;
 
-    if (!platform_wait_for_reg_bits(I2C1_BASE + I2C_SR1_OFFSET, I2C_SR1_RXNE, true)) {
-        *cr1 |= I2C_CR1_ACK;
+    if (!platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_RXNE_Msk, true)) {
+        I2C1->CR1 |= I2C_CR1_ACK_Msk;
         return false;
     }
 
-    *data = (uint8_t)(*platform_reg32(I2C1_BASE + I2C_DR_OFFSET) & 0xFFu);
-    *cr1 |= I2C_CR1_ACK;
+    *data = (uint8_t)(I2C1->DR & 0xFFu);
+    I2C1->CR1 |= I2C_CR1_ACK_Msk;
     return remaining == 1u;
 }
 
@@ -320,92 +260,73 @@ static bool platform_i2c1_read_registers_impl(uint8_t device_address,
 
 static bool platform_target_i2c1_init(const platform_i2c_config_t *config)
 {
-    volatile uint32_t *const rcc_ahb1enr = platform_reg32(RCC_BASE + RCC_AHB1ENR_OFFSET);
-    volatile uint32_t *const rcc_apb1rstr = platform_reg32(RCC_BASE + RCC_APB1RSTR_OFFSET);
-    volatile uint32_t *const rcc_apb1enr = platform_reg32(RCC_BASE + RCC_APB1ENR_OFFSET);
-    volatile uint32_t *const gpiob_moder = platform_reg32(GPIOB_BASE + GPIO_MODER_OFFSET);
-    volatile uint32_t *const gpiob_otyper = platform_reg32(GPIOB_BASE + GPIO_OTYPER_OFFSET);
-    volatile uint32_t *const gpiob_ospeedr = platform_reg32(GPIOB_BASE + GPIO_OSPEEDR_OFFSET);
-    volatile uint32_t *const gpiob_pupdr = platform_reg32(GPIOB_BASE + GPIO_PUPDR_OFFSET);
-    volatile uint32_t *const gpiob_afrh = platform_reg32(GPIOB_BASE + GPIO_AFRH_OFFSET);
-    volatile uint32_t *const i2c1_cr1 = platform_reg32(I2C1_BASE + I2C_CR1_OFFSET);
-    volatile uint32_t *const i2c1_cr2 = platform_reg32(I2C1_BASE + I2C_CR2_OFFSET);
-    volatile uint32_t *const i2c1_ccr = platform_reg32(I2C1_BASE + I2C_CCR_OFFSET);
-    volatile uint32_t *const i2c1_trise = platform_reg32(I2C1_BASE + I2C_TRISE_OFFSET);
-
     if ((config == NULL) || (config->bus != PLATFORM_I2C1)) {
         return false;
     }
 
-    *rcc_ahb1enr |= RCC_AHB1ENR_GPIOBEN;
-    (void)*rcc_ahb1enr;
+    /* Enable GPIOB clock and flush before touching GPIO registers. */
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN_Msk;
+    (void)RCC->AHB1ENR;
 
-    *gpiob_moder &= ~((3u << (config->scl.pin * 2u)) | (3u << (config->sda.pin * 2u)));
-    *gpiob_moder |= (2u << (config->scl.pin * 2u)) | (2u << (config->sda.pin * 2u));
-    *gpiob_otyper |= (1u << config->scl.pin) | (1u << config->sda.pin);
-    *gpiob_ospeedr &= ~((3u << (config->scl.pin * 2u)) | (3u << (config->sda.pin * 2u)));
-    *gpiob_ospeedr |= (3u << (config->scl.pin * 2u)) | (3u << (config->sda.pin * 2u));
-    *gpiob_pupdr &= ~((3u << (config->scl.pin * 2u)) | (3u << (config->sda.pin * 2u)));
-    *gpiob_pupdr |= (1u << (config->scl.pin * 2u)) | (1u << (config->sda.pin * 2u));
-    *gpiob_afrh &= ~((0xFu << ((config->scl.pin - 8u) * 4u)) | (0xFu << ((config->sda.pin - 8u) * 4u)));
-    *gpiob_afrh |= (4u << ((config->scl.pin - 8u) * 4u)) | (4u << ((config->sda.pin - 8u) * 4u));
+    /* PB8 (SCL) and PB9 (SDA): AF mode (10b), open-drain, high speed, pull-up, AF4. */
+    GPIOB->MODER   &= ~((3u << (config->scl.pin * 2u)) | (3u << (config->sda.pin * 2u)));
+    GPIOB->MODER   |=  (2u << (config->scl.pin * 2u))  | (2u << (config->sda.pin * 2u));
+    GPIOB->OTYPER  |=  (1u << config->scl.pin) | (1u << config->sda.pin);
+    GPIOB->OSPEEDR &= ~((3u << (config->scl.pin * 2u)) | (3u << (config->sda.pin * 2u)));
+    GPIOB->OSPEEDR |=  (3u << (config->scl.pin * 2u))  | (3u << (config->sda.pin * 2u));
+    GPIOB->PUPDR   &= ~((3u << (config->scl.pin * 2u)) | (3u << (config->sda.pin * 2u)));
+    GPIOB->PUPDR   |=  (1u << (config->scl.pin * 2u))  | (1u << (config->sda.pin * 2u));
+    GPIOB->AFR[1]  &= ~((0xFu << ((config->scl.pin - 8u) * 4u)) | (0xFu << ((config->sda.pin - 8u) * 4u)));
+    GPIOB->AFR[1]  |=  (4u << ((config->scl.pin - 8u) * 4u))    | (4u << ((config->sda.pin - 8u) * 4u));
 
-    *rcc_apb1enr |= RCC_APB1ENR_I2C1EN;
-    *rcc_apb1rstr |= RCC_APB1RSTR_I2C1RST;
-    *rcc_apb1rstr &= ~RCC_APB1RSTR_I2C1RST;
+    /* Enable I2C1 clock, pulse reset, then configure for 400 kHz (APB1 = 16 MHz HSI). */
+    RCC->APB1ENR  |=  RCC_APB1ENR_I2C1EN_Msk;
+    RCC->APB1RSTR |=  RCC_APB1RSTR_I2C1RST_Msk;
+    RCC->APB1RSTR &= ~RCC_APB1RSTR_I2C1RST_Msk;
 
-    *i2c1_cr1 = I2C_CR1_SWRST;
-    *i2c1_cr1 = 0u;
-    *i2c1_cr2 = 16u;
-    *i2c1_ccr = I2C_CCR_FS | 13u;
-    *i2c1_trise = 6u;
-    *i2c1_cr1 = I2C_CR1_PE | I2C_CR1_ACK;
+    I2C1->CR1   =  I2C_CR1_SWRST_Msk;
+    I2C1->CR1   =  0u;
+    I2C1->CR2   =  16u;                        /* FREQ = 16 MHz */
+    I2C1->CCR   =  I2C_CCR_FS_Msk | 13u;      /* fast mode, ~411 kHz */
+    I2C1->TRISE =  6u;                         /* (16 MHz * 300 ns) + 1 */
+    I2C1->CR1   =  I2C_CR1_PE_Msk | I2C_CR1_ACK_Msk;
 
     return true;
 }
 
 static bool platform_target_uart_output_init(const platform_uart_config_t *config)
 {
-    volatile uint32_t *const rcc_ahb1enr = platform_reg32(RCC_BASE + RCC_AHB1ENR_OFFSET);
-    volatile uint32_t *const rcc_apb1rstr = platform_reg32(RCC_BASE + RCC_APB1RSTR_OFFSET);
-    volatile uint32_t *const rcc_apb1enr = platform_reg32(RCC_BASE + RCC_APB1ENR_OFFSET);
-    volatile uint32_t *const gpioa_moder = platform_reg32(GPIOA_BASE + GPIO_MODER_OFFSET);
-    volatile uint32_t *const gpioa_otyper = platform_reg32(GPIOA_BASE + GPIO_OTYPER_OFFSET);
-    volatile uint32_t *const gpioa_ospeedr = platform_reg32(GPIOA_BASE + GPIO_OSPEEDR_OFFSET);
-    volatile uint32_t *const gpioa_pupdr = platform_reg32(GPIOA_BASE + GPIO_PUPDR_OFFSET);
-    volatile uint32_t *const gpioa_afrl = platform_reg32(GPIOA_BASE + GPIO_AFRL_OFFSET);
-    volatile uint32_t *const usart2_brr = platform_reg32(USART2_BASE + USART_BRR_OFFSET);
-    volatile uint32_t *const usart2_cr1 = platform_reg32(USART2_BASE + USART_CR1_OFFSET);
-    volatile uint32_t *const usart2_cr2 = platform_reg32(USART2_BASE + USART_CR2_OFFSET);
-    volatile uint32_t *const usart2_cr3 = platform_reg32(USART2_BASE + USART_CR3_OFFSET);
-    const uint32_t tx_pin = 2u;
+    const uint32_t tx_pin = 2u; /* PA2 = USART2_TX, AF7 */
 
     if ((config == NULL) || (config->uart != PLATFORM_UART_OUTPUT) || !config->tx_enabled ||
         (config->baud_rate != 115200u)) {
         return false;
     }
 
-    *rcc_ahb1enr |= RCC_AHB1ENR_GPIOAEN;
-    (void)*rcc_ahb1enr;
+    /* Enable GPIOA clock and flush. */
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN_Msk;
+    (void)RCC->AHB1ENR;
 
-    *gpioa_moder &= ~(3u << (tx_pin * 2u));
-    *gpioa_moder |= 2u << (tx_pin * 2u);
-    *gpioa_otyper &= ~(1u << tx_pin);
-    *gpioa_ospeedr &= ~(3u << (tx_pin * 2u));
-    *gpioa_ospeedr |= 2u << (tx_pin * 2u);
-    *gpioa_pupdr &= ~(3u << (tx_pin * 2u));
-    *gpioa_afrl &= ~(0xFu << (tx_pin * 4u));
-    *gpioa_afrl |= 7u << (tx_pin * 4u);
+    /* PA2: AF mode (10b), push-pull, medium speed, no pull, AF7 (USART2_TX). */
+    GPIOA->MODER   &= ~(3u << (tx_pin * 2u));
+    GPIOA->MODER   |=  (2u << (tx_pin * 2u));
+    GPIOA->OTYPER  &= ~(1u << tx_pin);
+    GPIOA->OSPEEDR &= ~(3u << (tx_pin * 2u));
+    GPIOA->OSPEEDR |=  (2u << (tx_pin * 2u));
+    GPIOA->PUPDR   &= ~(3u << (tx_pin * 2u));
+    GPIOA->AFR[0]  &= ~(0xFu << (tx_pin * 4u));
+    GPIOA->AFR[0]  |=  (7u   << (tx_pin * 4u));
 
-    *rcc_apb1enr |= RCC_APB1ENR_USART2EN;
-    *rcc_apb1rstr |= RCC_APB1RSTR_USART2RST;
-    *rcc_apb1rstr &= ~RCC_APB1RSTR_USART2RST;
+    /* Enable USART2 clock, pulse reset, then configure 115200 baud, TX only. */
+    RCC->APB1ENR  |=  RCC_APB1ENR_USART2EN_Msk;
+    RCC->APB1RSTR |=  RCC_APB1RSTR_USART2RST_Msk;
+    RCC->APB1RSTR &= ~RCC_APB1RSTR_USART2RST_Msk;
 
-    *usart2_cr1 = 0u;
-    *usart2_cr2 = 0u;
-    *usart2_cr3 = 0u;
-    *usart2_brr = 0x008Bu;
-    *usart2_cr1 = USART_CR1_UE | USART_CR1_TE;
+    USART2->CR1 = 0u;
+    USART2->CR2 = 0u;
+    USART2->CR3 = 0u;
+    USART2->BRR = 0x008Bu;                     /* 16 MHz / 115200 ≈ 139 = 0x8B */
+    USART2->CR1 = USART_CR1_UE_Msk | USART_CR1_TE_Msk;
 
     return true;
 }
@@ -419,11 +340,11 @@ static platform_io_status_t platform_target_uart_output_write(const uint8_t *dat
     }
 
     for (index = 0u; index < length; ++index) {
-        if (!platform_wait_for_reg_bits(USART2_BASE + USART_SR_OFFSET, USART_SR_TXE, true)) {
+        if (!platform_wait_for_reg_bits(&USART2->SR, USART_SR_TXE_Msk, true)) {
             return PLATFORM_IO_STATUS_NOT_READY;
         }
 
-        *platform_reg32(USART2_BASE + USART_DR_OFFSET) = data[index];
+        USART2->DR = data[index];
     }
 
     return PLATFORM_IO_STATUS_OK;
