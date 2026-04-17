@@ -48,6 +48,15 @@ enum {
     PLATFORM_I2C_TIMEOUT = 10000u,
 };
 
+static platform_i2c_debug_t g_i2c1_debug;
+
+static void platform_i2c1_debug_record(uint32_t step)
+{
+    g_i2c1_debug.step = step;
+    g_i2c1_debug.sr1  = I2C1->SR1;
+    g_i2c1_debug.sr2  = I2C1->SR2;
+}
+
 static bool platform_wait_for_reg_bits(volatile uint32_t *reg, uint32_t mask, bool set)
 {
     uint32_t attempt;
@@ -80,11 +89,18 @@ static void platform_i2c1_clear_ack_failure(void)
 static bool platform_i2c1_start(void)
 {
     if (!platform_wait_for_reg_bits(&I2C1->SR2, I2C_SR2_BUSY_Msk, false)) {
+        platform_i2c1_debug_record(1u); /* step 1: bus busy, never released */
         return false;
     }
 
     I2C1->CR1 |= I2C_CR1_START_Msk;
-    return platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_SB_Msk, true);
+
+    if (!platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_SB_Msk, true)) {
+        platform_i2c1_debug_record(2u); /* step 2: START sent but SB never set */
+        return false;
+    }
+
+    return true;
 }
 
 static bool platform_i2c1_send_address(uint8_t address_byte)
@@ -97,26 +113,36 @@ static bool platform_i2c1_send_address(uint8_t address_byte)
         const uint32_t sr1 = I2C1->SR1;
 
         if ((sr1 & I2C_SR1_ADDR_Msk) != 0u) {
+            g_i2c1_debug.step = 0u; /* success */
             return true;
         }
 
         if ((sr1 & I2C_SR1_AF_Msk) != 0u) {
+            platform_i2c1_debug_record(3u); /* step 3: NACK received (AF flag) */
             platform_i2c1_clear_ack_failure();
             return false;
         }
     }
 
+    platform_i2c1_debug_record(4u); /* step 4: timeout, no ADDR and no AF */
     return false;
 }
 
 static bool platform_i2c1_write_byte(uint8_t value)
 {
     if (!platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_TXE_Msk, true)) {
+        platform_i2c1_debug_record(5u); /* step 5: TXE timeout */
         return false;
     }
 
     I2C1->DR = value;
-    return platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_BTF_Msk, true);
+
+    if (!platform_wait_for_reg_bits(&I2C1->SR1, I2C_SR1_BTF_Msk, true)) {
+        platform_i2c1_debug_record(6u); /* step 6: BTF timeout after write */
+        return false;
+    }
+
+    return true;
 }
 
 static void platform_i2c1_stop(void)
@@ -331,6 +357,11 @@ static bool platform_target_uart_output_init(const platform_uart_config_t *confi
     return true;
 }
 
+platform_i2c_debug_t platform_i2c1_get_debug(void)
+{
+    return g_i2c1_debug;
+}
+
 static platform_io_status_t platform_target_uart_output_write(const uint8_t *data, uint16_t length)
 {
     uint16_t index;
@@ -348,6 +379,14 @@ static platform_io_status_t platform_target_uart_output_write(const uint8_t *dat
     }
 
     return PLATFORM_IO_STATUS_OK;
+}
+#endif
+
+#if !defined(EXCAVATOR_TARGET_STM32F446RE)
+platform_i2c_debug_t platform_i2c1_get_debug(void)
+{
+    platform_i2c_debug_t debug = {0u, 0u, 0u};
+    return debug;
 }
 #endif
 

@@ -68,17 +68,25 @@ int app_run(void)
                     &sample, config.sensor_mounts[EXCAVATOR_SENSOR_S1].angle_offset_rad);
         }
 
-        output_length = (size_t)snprintf(output_line,
-                                         sizeof(output_line),
-                                         "bench=s1 status=%d platform_ok=%u i2c1=%u read=%u s1_mdeg=%ld ax=%ld ay=%ld az=%ld\r\n",
-                                         status_code,
-                                         platform_status_ok(state.platform_status) ? 1u : 0u,
-                                         platform_i2c_ready(state.platform_status, PLATFORM_I2C1) ? 1u : 0u,
-                                         (status_code == 0) ? 1u : 0u,
-                                         (long)(state.estimation.orientation.s1_angle_rad * 1000.0f),
-                                         (long)(sample.accel_x_mps2 * 1000.0f),
-                                         (long)(sample.accel_y_mps2 * 1000.0f),
-                                         (long)(sample.accel_z_mps2 * 1000.0f));
+        {
+            platform_i2c_debug_t dbg = platform_i2c1_get_debug();
+            output_length = (size_t)snprintf(output_line,
+                                             sizeof(output_line),
+                                             "bench=s1 status=%d platform_ok=%u i2c1=%u read=%u"
+                                             " i2c_step=%lu sr1=0x%04lx sr2=0x%04lx"
+                                             " s1_mdeg=%ld ax=%ld ay=%ld az=%ld\r\n",
+                                             status_code,
+                                             platform_status_ok(state.platform_status) ? 1u : 0u,
+                                             platform_i2c_ready(state.platform_status, PLATFORM_I2C1) ? 1u : 0u,
+                                             (status_code == 0) ? 1u : 0u,
+                                             (unsigned long)dbg.step,
+                                             (unsigned long)dbg.sr1,
+                                             (unsigned long)dbg.sr2,
+                                             (long)(state.estimation.orientation.s1_angle_rad * 1000.0f),
+                                             (long)(sample.accel_x_mps2 * 1000.0f),
+                                             (long)(sample.accel_y_mps2 * 1000.0f),
+                                             (long)(sample.accel_z_mps2 * 1000.0f));
+        }
         if ((output_length > 0u) && (output_length < sizeof(output_line))) {
             (void)platform_uart_write(PLATFORM_UART_OUTPUT,
                                       (const uint8_t *)output_line,

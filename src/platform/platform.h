@@ -85,6 +85,19 @@ typedef struct {
     uint32_t bitrate_hz;
 } platform_i2c_pinout_t;
 
+/*
+ * I2C debug snapshot populated on the target after every failed operation.
+ * step: 0=ok 1=busy 2=sb 3=nack(AF) 4=addr_timeout 5=txe 6=btf 7=rxne 8=btf_read
+ * sr1:  raw I2C1->SR1 at failure; 0x0400=AF(NACK), 0x0200=BERR, 0x0000=silent
+ */
+typedef struct {
+    uint32_t step;
+    uint32_t sr1;
+    uint32_t sr2;
+} platform_i2c_debug_t;
+
+platform_i2c_debug_t platform_i2c1_get_debug(void);
+
 platform_status_t platform_init(void);
 platform_backend_t platform_backend(platform_status_t status);
 bool platform_status_ok(platform_status_t status);
