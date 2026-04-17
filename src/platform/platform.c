@@ -45,7 +45,7 @@ static platform_status_t g_platform_status = {
 #include <stm32f446xx.h>
 
 enum {
-    PLATFORM_I2C_TIMEOUT = 1000000u,
+    PLATFORM_I2C_TIMEOUT = 10000u,
 };
 
 static bool platform_wait_for_reg_bits(volatile uint32_t *reg, uint32_t mask, bool set)
