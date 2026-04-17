@@ -48,12 +48,17 @@ int app_run(void)
 
         if (!platform_status_ok(state.platform_status)) {
             status_code = 1;
-        } else if (bmi160_init(PLATFORM_I2C1) != BMI160_STATUS_OK) {
-            status_code = 2;
-        } else if ((read_status = bmi160_read_sample(PLATFORM_I2C1, &sample)) != BMI160_STATUS_OK) {
-            status_code = 3;
-        } else if (!excavator_state_set_imu_sample(&state, EXCAVATOR_SENSOR_S1, &sample)) {
-            status_code = 4;
+        } else {
+            bmi160_status_t init_status = bmi160_init(PLATFORM_I2C1);
+            if (init_status == BMI160_STATUS_CHIP_ID_MISMATCH) {
+                status_code = 5; /* I2C ACK ok, but chip_id != 0xD1 */
+            } else if (init_status != BMI160_STATUS_OK) {
+                status_code = 2; /* no ACK / bus stuck */
+            } else if ((read_status = bmi160_read_sample(PLATFORM_I2C1, &sample)) != BMI160_STATUS_OK) {
+                status_code = 3;
+            } else if (!excavator_state_set_imu_sample(&state, EXCAVATOR_SENSOR_S1, &sample)) {
+                status_code = 4;
+            }
         }
 
         if (status_code == 0) {

@@ -19,10 +19,10 @@ typedef struct {
 } platform_uart_config_t;
 
 static const platform_i2c_config_t k_i2c_configs[PLATFORM_I2C_COUNT] = {
-    { PLATFORM_I2C1, { PLATFORM_GPIO_PORT_B, 8u }, { PLATFORM_GPIO_PORT_B, 9u }, 400000u },
-    { PLATFORM_I2C2, { PLATFORM_GPIO_PORT_B, 10u }, { PLATFORM_GPIO_PORT_C, 12u }, 400000u },
-    { PLATFORM_I2C3, { PLATFORM_GPIO_PORT_A, 8u }, { PLATFORM_GPIO_PORT_C, 9u }, 400000u },
-    { PLATFORM_FMPI2C1, { PLATFORM_GPIO_PORT_C, 6u }, { PLATFORM_GPIO_PORT_C, 7u }, 400000u },
+    { PLATFORM_I2C1, { PLATFORM_GPIO_PORT_B, 8u }, { PLATFORM_GPIO_PORT_B, 9u }, 100000u },
+    { PLATFORM_I2C2, { PLATFORM_GPIO_PORT_B, 10u }, { PLATFORM_GPIO_PORT_C, 12u }, 100000u },
+    { PLATFORM_I2C3, { PLATFORM_GPIO_PORT_A, 8u }, { PLATFORM_GPIO_PORT_C, 9u }, 100000u },
+    { PLATFORM_FMPI2C1, { PLATFORM_GPIO_PORT_C, 6u }, { PLATFORM_GPIO_PORT_C, 7u }, 100000u },
 };
 
 /*
@@ -287,8 +287,8 @@ static bool platform_target_i2c1_init(const platform_i2c_config_t *config)
     I2C1->CR1   =  I2C_CR1_SWRST_Msk;
     I2C1->CR1   =  0u;
     I2C1->CR2   =  16u;                        /* FREQ = 16 MHz */
-    I2C1->CCR   =  I2C_CCR_FS_Msk | 13u;      /* fast mode, ~411 kHz */
-    I2C1->TRISE =  6u;                         /* (16 MHz * 300 ns) + 1 */
+    I2C1->CCR   =  80u;                        /* standard mode, 100 kHz: 16 MHz / (2 * 100 kHz) */
+    I2C1->TRISE =  17u;                        /* (16 MHz * 1000 ns) + 1 */
     I2C1->CR1   =  I2C_CR1_PE_Msk | I2C_CR1_ACK_Msk;
 
     return true;
