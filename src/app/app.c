@@ -37,6 +37,32 @@ int app_run(void)
     int status_code = 0;
     uint32_t loop_delay;
 
+    /* I2C bus scan — runs once at startup, prints every address that ACKs. */
+    {
+        uint8_t scan_addr;
+        uint8_t scan_dummy;
+        char scan_line[48];
+        uint16_t scan_len;
+        bool scan_found = false;
+
+        for (scan_addr = 0x03u; scan_addr <= 0x77u; ++scan_addr) {
+            if (platform_i2c_read_registers(PLATFORM_I2C1, scan_addr, 0x00u,
+                                            &scan_dummy, 1u) == PLATFORM_IO_STATUS_OK) {
+                scan_len = (uint16_t)snprintf(scan_line, sizeof(scan_line),
+                                              "i2c_scan: ACK 0x%02X\r\n", scan_addr);
+                (void)platform_uart_write(PLATFORM_UART_OUTPUT,
+                                          (const uint8_t *)scan_line, scan_len);
+                scan_found = true;
+            }
+        }
+        if (!scan_found) {
+            scan_len = (uint16_t)snprintf(scan_line, sizeof(scan_line),
+                                          "i2c_scan: no device found\r\n");
+            (void)platform_uart_write(PLATFORM_UART_OUTPUT,
+                                      (const uint8_t *)scan_line, scan_len);
+        }
+    }
+
     /*
      * Bench target for the NUCLEO-F446RE: read S1 on I2C1 and emit repeated
      * plain-ASCII telemetry over USART2/ST-LINK VCP.
