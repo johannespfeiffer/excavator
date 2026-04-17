@@ -1,4 +1,4 @@
-ENTRY(main)
+ENTRY(Reset_Handler)
 
 MEMORY
 {
@@ -6,15 +6,23 @@ MEMORY
     RAM   (xrw) : ORIGIN = 0x20000000, LENGTH = 128K
 }
 
+_estack = ORIGIN(RAM) + LENGTH(RAM);
+
 SECTIONS
 {
-    .text :
+    .isr_vector :
     {
         KEEP(*(.isr_vector))
+    } > FLASH
+
+    .text :
+    {
         *(.text*)
         *(.rodata*)
         _etext = .;
     } > FLASH
+
+    _sidata = LOADADDR(.data);
 
     .data : AT(_etext)
     {
@@ -30,4 +38,10 @@ SECTIONS
         *(COMMON)
         _ebss = .;
     } > RAM
+
+    /DISCARD/ :
+    {
+        *(.note*)
+        *(.comment*)
+    }
 }

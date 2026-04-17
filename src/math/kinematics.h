@@ -6,6 +6,7 @@
 #include "orientation.h"
 
 typedef struct {
+    bool inputs_valid;
     float delta_height_m;
     float absolute_height_m;
 } bucket_height_result_t;

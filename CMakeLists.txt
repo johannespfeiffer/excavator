@@ -17,7 +17,7 @@ set(EXCAVATOR_COMMON_SOURCES
     src/drivers/gps/gps_parser.c
     src/math/kinematics.c
     src/math/orientation.c
-    src/platform/platform_stub.c
+    src/platform/platform.c
 )
 
 set(EXCAVATOR_COMMON_INCLUDES
@@ -35,6 +35,17 @@ target_include_directories(excavator_core PUBLIC ${EXCAVATOR_COMMON_INCLUDES})
 target_compile_options(excavator_core PRIVATE -Wall -Wextra -Wpedantic)
 
 if(EXCAVATOR_ENABLE_TARGET)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+        target_compile_options(excavator_core PRIVATE
+            -mcpu=cortex-m4
+            -mthumb
+            -ffunction-sections
+            -fdata-sections
+            -ffreestanding
+        )
+    endif()
+    target_compile_definitions(excavator_core PRIVATE EXCAVATOR_TARGET_STM32F446RE=1)
+
     add_executable(excavator_firmware.elf
         src/platform/startup_placeholder.c
     )
@@ -47,6 +58,7 @@ if(EXCAVATOR_ENABLE_TARGET)
             -mthumb
             -ffunction-sections
             -fdata-sections
+            -ffreestanding
         )
         target_link_options(excavator_firmware.elf PRIVATE
             -T${CMAKE_CURRENT_SOURCE_DIR}/linker/stm32f446re.ld

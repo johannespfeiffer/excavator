@@ -16,9 +16,12 @@ int app_run(void)
     orientation_estimate_t orientation = orientation_estimate_level();
     bucket_height_result_t height = kinematics_calculate_bucket_height(&config.geometry, &orientation, &gps_fix);
 
-    (void)platform_status;
     (void)imu_sample;
     (void)height;
+
+    if (!platform_status_ok(platform_status)) {
+        return 1;
+    }
 
     gps_parser_reset();
     return 0;

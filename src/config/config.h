@@ -1,6 +1,8 @@
 #ifndef EXCAVATOR_CONFIG_H
 #define EXCAVATOR_CONFIG_H
 
+#include <stdbool.h>
+
 typedef struct {
     float l1_m;
     float l2_m;
@@ -14,5 +16,6 @@ typedef struct {
 } excavator_config_t;
 
 excavator_config_t excavator_config_default(void);
+bool excavator_geometry_is_configured(const excavator_geometry_t *geometry);
 
 #endif
