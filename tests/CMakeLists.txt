@@ -16,6 +16,15 @@ target_compile_options(excavator_app_tests PRIVATE -Wall -Wextra -Wpedantic)
 
 add_test(NAME excavator_app_tests COMMAND $<TARGET_FILE:excavator_app_tests>)
 
+add_executable(excavator_bmi160_tests
+    test_bmi160.c
+)
+
+target_link_libraries(excavator_bmi160_tests PRIVATE excavator_core)
+target_compile_options(excavator_bmi160_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+add_test(NAME excavator_bmi160_tests COMMAND $<TARGET_FILE:excavator_bmi160_tests>)
+
 add_executable(excavator_platform_tests
     test_platform.c
 )

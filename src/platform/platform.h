@@ -45,6 +45,14 @@ typedef enum {
     PLATFORM_ERROR_NOT_IMPLEMENTED = 1u << 5,
 } platform_error_flag_t;
 
+typedef enum {
+    PLATFORM_IO_STATUS_OK = 0,
+    PLATFORM_IO_STATUS_INVALID_ARGUMENT = 1,
+    PLATFORM_IO_STATUS_NOT_READY = 2,
+    PLATFORM_IO_STATUS_NOT_FOUND = 3,
+    PLATFORM_IO_STATUS_NOT_IMPLEMENTED = 4,
+} platform_io_status_t;
+
 typedef struct {
     platform_backend_t backend;
     uint32_t ready_flags;
@@ -56,5 +64,25 @@ platform_backend_t platform_backend(platform_status_t status);
 bool platform_status_ok(platform_status_t status);
 bool platform_uart_ready(platform_status_t status, platform_uart_t uart);
 bool platform_i2c_ready(platform_status_t status, platform_i2c_bus_t bus);
+platform_io_status_t platform_i2c_write_registers(platform_i2c_bus_t bus,
+                                                  uint8_t device_address,
+                                                  uint8_t register_address,
+                                                  const uint8_t *data,
+                                                  uint16_t length);
+platform_io_status_t platform_i2c_read_registers(platform_i2c_bus_t bus,
+                                                 uint8_t device_address,
+                                                 uint8_t register_address,
+                                                 uint8_t *data,
+                                                 uint16_t length);
+bool platform_simulated_i2c_set_registers(platform_i2c_bus_t bus,
+                                          uint8_t device_address,
+                                          uint8_t register_address,
+                                          const uint8_t *data,
+                                          uint16_t length);
+bool platform_simulated_i2c_get_registers(platform_i2c_bus_t bus,
+                                          uint8_t device_address,
+                                          uint8_t register_address,
+                                          uint8_t *data,
+                                          uint16_t length);
 
 #endif

@@ -9,11 +9,23 @@ typedef struct {
 } platform_i2c_config_t;
 
 typedef struct {
+    bool present;
+    uint8_t address;
+    uint8_t registers[256];
+} platform_simulated_i2c_device_t;
+
+typedef struct {
     platform_uart_t uart;
     uint32_t baud_rate;
     bool rx_enabled;
     bool tx_enabled;
 } platform_uart_config_t;
+
+enum {
+    PLATFORM_SIM_BMI160_ADDRESS = 0x68u,
+    PLATFORM_SIM_BMI160_REG_CHIP_ID = 0x00u,
+    PLATFORM_SIM_BMI160_CHIP_ID = 0xD1u,
+};
 
 static const platform_i2c_config_t k_i2c_configs[PLATFORM_I2C_COUNT] = {
     { PLATFORM_I2C1, 400000u },
@@ -30,6 +42,14 @@ static const platform_uart_config_t k_uart_configs[PLATFORM_UART_COUNT] = {
     { PLATFORM_UART_GPS, 115200u, true, false },
     { PLATFORM_UART_OUTPUT, 115200u, false, true },
 };
+
+static platform_status_t g_platform_status = {
+    .backend = PLATFORM_BACKEND_SIMULATED,
+    .ready_flags = 0u,
+    .error_flags = PLATFORM_ERROR_NOT_IMPLEMENTED,
+};
+
+static platform_simulated_i2c_device_t g_simulated_i2c_devices[PLATFORM_I2C_COUNT];
 
 static platform_backend_t platform_detect_backend(void)
 {
@@ -80,6 +100,41 @@ static uint32_t platform_uart_ready_flag(platform_uart_t uart)
     case PLATFORM_UART_COUNT:
     default:
         return 0u;
+    }
+}
+
+static bool platform_valid_i2c_transaction(platform_i2c_bus_t bus,
+                                           const uint8_t *write_data,
+                                           uint8_t *read_data,
+                                           uint16_t length)
+{
+    if (bus >= PLATFORM_I2C_COUNT) {
+        return false;
+    }
+
+    if ((length > 0u) && (write_data == NULL) && (read_data == NULL)) {
+        return false;
+    }
+
+    return true;
+}
+
+static void platform_simulated_i2c_reset(void)
+{
+    size_t index;
+
+    for (index = 0; index < PLATFORM_I2C_COUNT; ++index) {
+        platform_simulated_i2c_device_t *device = &g_simulated_i2c_devices[index];
+        size_t reg_index;
+
+        device->present = true;
+        device->address = PLATFORM_SIM_BMI160_ADDRESS;
+
+        for (reg_index = 0; reg_index < sizeof(device->registers); ++reg_index) {
+            device->registers[reg_index] = 0u;
+        }
+
+        device->registers[PLATFORM_SIM_BMI160_REG_CHIP_ID] = PLATFORM_SIM_BMI160_CHIP_ID;
     }
 }
 
@@ -168,6 +223,7 @@ platform_status_t platform_init(void)
 
 #if defined(EXCAVATOR_TARGET_STM32F446RE)
     status.error_flags |= PLATFORM_ERROR_NOT_IMPLEMENTED;
+    g_platform_status = status;
     return status;
 #endif
 
@@ -175,7 +231,9 @@ platform_status_t platform_init(void)
     platform_init_gpio(&status);
     platform_init_uarts(&status);
     platform_init_i2c_buses(&status);
+    platform_simulated_i2c_reset();
     platform_run_self_test(&status);
+    g_platform_status = status;
 
     return status;
 }
@@ -203,4 +261,148 @@ bool platform_i2c_ready(platform_status_t status, platform_i2c_bus_t bus)
     const uint32_t ready_flag = platform_i2c_ready_flag(bus);
 
     return (ready_flag != 0u) && ((status.ready_flags & ready_flag) == ready_flag);
+}
+
+platform_io_status_t platform_i2c_write_registers(platform_i2c_bus_t bus,
+                                                  uint8_t device_address,
+                                                  uint8_t register_address,
+                                                  const uint8_t *data,
+                                                  uint16_t length)
+{
+#if defined(EXCAVATOR_TARGET_STM32F446RE)
+    (void)bus;
+    (void)device_address;
+    (void)register_address;
+    (void)data;
+    (void)length;
+    return PLATFORM_IO_STATUS_NOT_IMPLEMENTED;
+#else
+    platform_simulated_i2c_device_t *device;
+    uint16_t index;
+
+    if (!platform_valid_i2c_transaction(bus, data, NULL, length)) {
+        return PLATFORM_IO_STATUS_INVALID_ARGUMENT;
+    }
+
+    if (!platform_status_ok(g_platform_status) || !platform_i2c_ready(g_platform_status, bus)) {
+        return PLATFORM_IO_STATUS_NOT_READY;
+    }
+
+    device = &g_simulated_i2c_devices[bus];
+    if (!device->present || (device->address != device_address)) {
+        return PLATFORM_IO_STATUS_NOT_FOUND;
+    }
+
+    for (index = 0; index < length; ++index) {
+        device->registers[(uint8_t)(register_address + index)] = data[index];
+    }
+
+    return PLATFORM_IO_STATUS_OK;
+#endif
+}
+
+platform_io_status_t platform_i2c_read_registers(platform_i2c_bus_t bus,
+                                                 uint8_t device_address,
+                                                 uint8_t register_address,
+                                                 uint8_t *data,
+                                                 uint16_t length)
+{
+#if defined(EXCAVATOR_TARGET_STM32F446RE)
+    (void)bus;
+    (void)device_address;
+    (void)register_address;
+    (void)data;
+    (void)length;
+    return PLATFORM_IO_STATUS_NOT_IMPLEMENTED;
+#else
+    const platform_simulated_i2c_device_t *device;
+    uint16_t index;
+
+    if (!platform_valid_i2c_transaction(bus, NULL, data, length)) {
+        return PLATFORM_IO_STATUS_INVALID_ARGUMENT;
+    }
+
+    if (!platform_status_ok(g_platform_status) || !platform_i2c_ready(g_platform_status, bus)) {
+        return PLATFORM_IO_STATUS_NOT_READY;
+    }
+
+    device = &g_simulated_i2c_devices[bus];
+    if (!device->present || (device->address != device_address)) {
+        return PLATFORM_IO_STATUS_NOT_FOUND;
+    }
+
+    for (index = 0; index < length; ++index) {
+        data[index] = device->registers[(uint8_t)(register_address + index)];
+    }
+
+    return PLATFORM_IO_STATUS_OK;
+#endif
+}
+
+bool platform_simulated_i2c_set_registers(platform_i2c_bus_t bus,
+                                          uint8_t device_address,
+                                          uint8_t register_address,
+                                          const uint8_t *data,
+                                          uint16_t length)
+{
+#if defined(EXCAVATOR_TARGET_STM32F446RE)
+    (void)bus;
+    (void)device_address;
+    (void)register_address;
+    (void)data;
+    (void)length;
+    return false;
+#else
+    platform_simulated_i2c_device_t *device;
+    uint16_t index;
+
+    if (!platform_valid_i2c_transaction(bus, data, NULL, length)) {
+        return false;
+    }
+
+    device = &g_simulated_i2c_devices[bus];
+    if (!device->present || (device->address != device_address)) {
+        return false;
+    }
+
+    for (index = 0; index < length; ++index) {
+        device->registers[(uint8_t)(register_address + index)] = data[index];
+    }
+
+    return true;
+#endif
+}
+
+bool platform_simulated_i2c_get_registers(platform_i2c_bus_t bus,
+                                          uint8_t device_address,
+                                          uint8_t register_address,
+                                          uint8_t *data,
+                                          uint16_t length)
+{
+#if defined(EXCAVATOR_TARGET_STM32F446RE)
+    (void)bus;
+    (void)device_address;
+    (void)register_address;
+    (void)data;
+    (void)length;
+    return false;
+#else
+    const platform_simulated_i2c_device_t *device;
+    uint16_t index;
+
+    if (!platform_valid_i2c_transaction(bus, NULL, data, length)) {
+        return false;
+    }
+
+    device = &g_simulated_i2c_devices[bus];
+    if (!device->present || (device->address != device_address)) {
+        return false;
+    }
+
+    for (index = 0; index < length; ++index) {
+        data[index] = device->registers[(uint8_t)(register_address + index)];
+    }
+
+    return true;
+#endif
 }

@@ -1,11 +1,15 @@
 #ifndef EXCAVATOR_BMI160_H
 #define EXCAVATOR_BMI160_H
 
+#include "platform.h"
+
 #include <stdint.h>
 
 typedef enum {
     BMI160_STATUS_OK = 0,
-    BMI160_STATUS_ERROR = 1,
+    BMI160_STATUS_INVALID_ARGUMENT = 1,
+    BMI160_STATUS_COMMUNICATION_ERROR = 2,
+    BMI160_STATUS_CHIP_ID_MISMATCH = 3,
 } bmi160_status_t;
 
 typedef struct {
@@ -17,7 +21,16 @@ typedef struct {
     float gyro_z_radps;
 } bmi160_sample_t;
 
-bmi160_status_t bmi160_init(uint8_t bus_index);
-bmi160_status_t bmi160_read_sample(uint8_t bus_index, bmi160_sample_t *sample);
+enum {
+    BMI160_I2C_ADDRESS = 0x68u,
+    BMI160_CHIP_ID_VALUE = 0xD1u,
+    BMI160_REG_CHIP_ID = 0x00u,
+    BMI160_REG_GYRO_DATA = 0x0Cu,
+    BMI160_REG_ACCEL_DATA = 0x12u,
+    BMI160_REG_CMD = 0x7Eu,
+};
+
+bmi160_status_t bmi160_init(platform_i2c_bus_t bus);
+bmi160_status_t bmi160_read_sample(platform_i2c_bus_t bus, bmi160_sample_t *sample);
 
 #endif
