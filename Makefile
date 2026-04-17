@@ -1,10 +1,11 @@
 BUILD_DIR ?= build
 BUILD_TYPE ?= Debug
 GENERATOR ?= Unix Makefiles
+ARM_GCC ?= arm-none-eabi-gcc
 
 .PHONY: configure build clean flash debug size test
 
-configure:
+configure: check-toolchain
 	cmake -S . -B $(BUILD_DIR) -G "$(GENERATOR)" -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) -DCMAKE_TOOLCHAIN_FILE=cmake/arm-gcc-toolchain.cmake
 
 build: configure
@@ -26,3 +27,15 @@ test:
 	cmake -S . -B $(BUILD_DIR)-host -G "$(GENERATOR)" -DEXCAVATOR_ENABLE_TARGET=OFF -DEXCAVATOR_ENABLE_TESTS=ON
 	cmake --build $(BUILD_DIR)-host
 	ctest --test-dir $(BUILD_DIR)-host --output-on-failure
+
+check-toolchain:
+	@command -v cmake >/dev/null 2>&1 || { \
+		echo "cmake is not installed or not in PATH."; \
+		echo "Install CMake, then retry \`make\`."; \
+		exit 127; \
+	}
+	@command -v $(ARM_GCC) >/dev/null 2>&1 || { \
+		echo "$(ARM_GCC) is not installed or not in PATH."; \
+		echo "Install the ARM GCC toolchain to build firmware, or run \`make test\` for the host-side test suite."; \
+		exit 127; \
+	}
