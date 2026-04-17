@@ -187,3 +187,14 @@ bool excavator_state_inputs_ready(const excavator_state_t *state)
 
     return true;
 }
+
+bool excavator_state_output_ready(const excavator_state_t *state)
+{
+    if (state == 0) {
+        return false;
+    }
+
+    return platform_status_ok(state->platform_status) &&
+           state->estimation.valid &&
+           state->result.valid;
+}

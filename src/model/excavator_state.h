@@ -58,5 +58,6 @@ void excavator_state_set_platform_status(excavator_state_t *state, platform_stat
 bool excavator_state_estimate_orientation_quasistatic(excavator_state_t *state);
 bool excavator_state_update_result(excavator_state_t *state);
 bool excavator_state_inputs_ready(const excavator_state_t *state);
+bool excavator_state_output_ready(const excavator_state_t *state);
 
 #endif

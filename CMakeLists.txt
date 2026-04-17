@@ -12,6 +12,7 @@ option(EXCAVATOR_ENABLE_TESTS "Build host-side unit tests" ON)
 set(EXCAVATOR_COMMON_SOURCES
     src/app/main.c
     src/app/app.c
+    src/app/telemetry.c
     src/config/config.c
     src/drivers/bmi160/bmi160.c
     src/drivers/gps/gps_parser.c

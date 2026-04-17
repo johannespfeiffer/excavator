@@ -10,6 +10,11 @@ typedef struct {
 
 typedef struct {
     uint8_t buffer[256];
+    uint16_t length;
+} platform_simulated_uart_capture_t;
+
+typedef struct {
+    uint8_t buffer[256];
     uint16_t head;
     uint16_t tail;
     uint16_t count;
@@ -26,6 +31,7 @@ enum {
 
 static platform_simulated_i2c_device_t g_simulated_i2c_devices[PLATFORM_I2C_COUNT];
 static platform_simulated_uart_fifo_t g_simulated_uart_fifos[PLATFORM_UART_COUNT];
+static platform_simulated_uart_capture_t g_simulated_uart_tx[PLATFORM_UART_COUNT];
 
 static bool platform_simulated_valid_i2c_transaction(platform_i2c_bus_t bus,
                                                      const uint8_t *write_data,
@@ -83,6 +89,7 @@ void platform_simulated_reset(void)
         g_simulated_uart_fifos[index].head = 0u;
         g_simulated_uart_fifos[index].tail = 0u;
         g_simulated_uart_fifos[index].count = 0u;
+        g_simulated_uart_tx[index].length = 0u;
     }
 }
 
@@ -155,6 +162,27 @@ platform_io_status_t platform_simulated_uart_read_byte(platform_uart_t uart, uin
     return PLATFORM_IO_STATUS_OK;
 }
 
+platform_io_status_t platform_simulated_uart_write(platform_uart_t uart, const uint8_t *data, uint16_t length)
+{
+    platform_simulated_uart_capture_t *capture;
+    uint16_t index;
+
+    if ((uart >= PLATFORM_UART_COUNT) || ((length > 0u) && (data == NULL))) {
+        return PLATFORM_IO_STATUS_INVALID_ARGUMENT;
+    }
+
+    capture = &g_simulated_uart_tx[uart];
+    if ((uint32_t)capture->length + (uint32_t)length > sizeof(capture->buffer)) {
+        return PLATFORM_IO_STATUS_OVERFLOW;
+    }
+
+    for (index = 0u; index < length; ++index) {
+        capture->buffer[capture->length + index] = data[index];
+    }
+    capture->length = (uint16_t)(capture->length + length);
+    return PLATFORM_IO_STATUS_OK;
+}
+
 bool platform_simulated_i2c_set_registers_impl(platform_i2c_bus_t bus,
                                                uint8_t device_address,
                                                uint8_t register_address,
@@ -198,4 +226,28 @@ platform_io_status_t platform_simulated_uart_feed_impl(platform_uart_t uart,
     }
 
     return PLATFORM_IO_STATUS_OK;
+}
+
+platform_io_status_t platform_simulated_uart_copy_tx_impl(platform_uart_t uart,
+                                                          uint8_t *data,
+                                                          uint16_t max_length,
+                                                          uint16_t *copied_length)
+{
+    const platform_simulated_uart_capture_t *capture;
+    uint16_t index;
+    uint16_t actual_length;
+
+    if ((uart >= PLATFORM_UART_COUNT) || (copied_length == NULL) || ((max_length > 0u) && (data == NULL))) {
+        return PLATFORM_IO_STATUS_INVALID_ARGUMENT;
+    }
+
+    capture = &g_simulated_uart_tx[uart];
+    actual_length = (capture->length < max_length) ? capture->length : max_length;
+
+    for (index = 0u; index < actual_length; ++index) {
+        data[index] = capture->buffer[index];
+    }
+
+    *copied_length = actual_length;
+    return (actual_length < capture->length) ? PLATFORM_IO_STATUS_OVERFLOW : PLATFORM_IO_STATUS_OK;
 }

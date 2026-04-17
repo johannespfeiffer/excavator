@@ -102,6 +102,7 @@ platform_io_status_t platform_i2c_read_registers(platform_i2c_bus_t bus,
                                                  uint8_t *data,
                                                  uint16_t length);
 platform_io_status_t platform_uart_read_byte(platform_uart_t uart, uint8_t *byte_out);
+platform_io_status_t platform_uart_write(platform_uart_t uart, const uint8_t *data, uint16_t length);
 bool platform_simulated_i2c_set_registers(platform_i2c_bus_t bus,
                                           uint8_t device_address,
                                           uint8_t register_address,
@@ -115,5 +116,9 @@ bool platform_simulated_i2c_get_registers(platform_i2c_bus_t bus,
 platform_io_status_t platform_simulated_uart_feed(platform_uart_t uart,
                                                   const uint8_t *data,
                                                   uint16_t length);
+platform_io_status_t platform_simulated_uart_copy_tx(platform_uart_t uart,
+                                                     uint8_t *data,
+                                                     uint16_t max_length,
+                                                     uint16_t *copied_length);
 
 #endif

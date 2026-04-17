@@ -5,6 +5,7 @@
 #include "bmi160.h"
 #include "gps_parser.h"
 #include "platform.h"
+#include "telemetry.h"
 
 int app_run(void)
 {
@@ -23,6 +24,8 @@ int app_run(void)
     platform_status_t platform_status = platform_init();
     excavator_state_t state;
     bmi160_sample_t sample = {0};
+    char output_line[256];
+    size_t output_length = 0u;
 
     excavator_state_init(&state, &config);
     excavator_state_set_platform_status(&state, platform_status);
@@ -75,6 +78,10 @@ int app_run(void)
     }
 
     (void)excavator_state_update_result(&state);
+    output_length = telemetry_format_status_line(&state, output_line, sizeof(output_line));
+    if (output_length > 0u) {
+        (void)platform_uart_write(PLATFORM_UART_OUTPUT, (const uint8_t *)output_line, (uint16_t)output_length);
+    }
 
     return 0;
 #endif
