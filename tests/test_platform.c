@@ -30,7 +30,7 @@ int main(void)
     assert(i2c1_pinout.scl.pin == 8u);
     assert(i2c1_pinout.sda.port == PLATFORM_GPIO_PORT_B);
     assert(i2c1_pinout.sda.pin == 9u);
-    assert(i2c1_pinout.bitrate_hz == 100000u);
+    assert(i2c1_pinout.bitrate_hz == 50000u);
     assert(!platform_i2c_pinout(PLATFORM_I2C_COUNT, &i2c1_pinout));
     assert(!platform_i2c_pinout(PLATFORM_I2C1, 0));
 

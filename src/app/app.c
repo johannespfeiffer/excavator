@@ -39,6 +39,7 @@ int app_run(void)
     char scan_line[48];
     uint16_t scan_len;
     bool scan_found = false;
+    platform_i2c1_gpio_debug_t gpio_dbg;
     platform_io_status_t probe_68_status;
     platform_io_status_t probe_69_status;
     uint32_t loop_delay;
@@ -47,6 +48,21 @@ int app_run(void)
      * Bench target for the NUCLEO-F446RE: read S1 on I2C1 and emit repeated
      * plain-ASCII telemetry over USART2/ST-LINK VCP.
      */
+    gpio_dbg = platform_i2c1_get_gpio_debug();
+    output_length = (size_t)snprintf(output_line,
+                                     sizeof(output_line),
+                                     "i2c_gpio: scl=%lu sda=%lu moder=0x%08lx otyper=0x%04lx"
+                                     " pupdr=0x%08lx afr1=0x%08lx\r\n",
+                                     (unsigned long)gpio_dbg.scl_level,
+                                     (unsigned long)gpio_dbg.sda_level,
+                                     (unsigned long)gpio_dbg.moder,
+                                     (unsigned long)gpio_dbg.otyper,
+                                     (unsigned long)gpio_dbg.pupdr,
+                                     (unsigned long)gpio_dbg.afr1);
+    (void)platform_uart_write(PLATFORM_UART_OUTPUT,
+                              (const uint8_t *)output_line,
+                              (uint16_t)output_length);
+
     probe_68_status = platform_i2c_probe_address(PLATFORM_I2C1, 0x68u);
     probe_69_status = platform_i2c_probe_address(PLATFORM_I2C1, 0x69u);
     scan_len = (uint16_t)snprintf(scan_line, sizeof(scan_line),

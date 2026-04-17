@@ -96,7 +96,17 @@ typedef struct {
     uint32_t sr2;
 } platform_i2c_debug_t;
 
+typedef struct {
+    uint32_t scl_level;
+    uint32_t sda_level;
+    uint32_t moder;
+    uint32_t otyper;
+    uint32_t pupdr;
+    uint32_t afr1;
+} platform_i2c1_gpio_debug_t;
+
 platform_i2c_debug_t platform_i2c1_get_debug(void);
+platform_i2c1_gpio_debug_t platform_i2c1_get_gpio_debug(void);
 
 platform_status_t platform_init(void);
 platform_backend_t platform_backend(platform_status_t status);

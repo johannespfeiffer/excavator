@@ -19,10 +19,10 @@ typedef struct {
 } platform_uart_config_t;
 
 static const platform_i2c_config_t k_i2c_configs[PLATFORM_I2C_COUNT] = {
-    { PLATFORM_I2C1, { PLATFORM_GPIO_PORT_B, 8u }, { PLATFORM_GPIO_PORT_B, 9u }, 100000u },
-    { PLATFORM_I2C2, { PLATFORM_GPIO_PORT_B, 10u }, { PLATFORM_GPIO_PORT_C, 12u }, 100000u },
-    { PLATFORM_I2C3, { PLATFORM_GPIO_PORT_A, 8u }, { PLATFORM_GPIO_PORT_C, 9u }, 100000u },
-    { PLATFORM_FMPI2C1, { PLATFORM_GPIO_PORT_C, 6u }, { PLATFORM_GPIO_PORT_C, 7u }, 100000u },
+    { PLATFORM_I2C1, { PLATFORM_GPIO_PORT_B, 8u }, { PLATFORM_GPIO_PORT_B, 9u }, 50000u },
+    { PLATFORM_I2C2, { PLATFORM_GPIO_PORT_B, 10u }, { PLATFORM_GPIO_PORT_C, 12u }, 50000u },
+    { PLATFORM_I2C3, { PLATFORM_GPIO_PORT_A, 8u }, { PLATFORM_GPIO_PORT_C, 9u }, 50000u },
+    { PLATFORM_FMPI2C1, { PLATFORM_GPIO_PORT_C, 6u }, { PLATFORM_GPIO_PORT_C, 7u }, 50000u },
 };
 
 /*
@@ -321,7 +321,7 @@ static bool platform_target_i2c1_init(const platform_i2c_config_t *config)
     GPIOB->AFR[1]  &= ~((0xFu << ((config->scl.pin - 8u) * 4u)) | (0xFu << ((config->sda.pin - 8u) * 4u)));
     GPIOB->AFR[1]  |=  (4u << ((config->scl.pin - 8u) * 4u))    | (4u << ((config->sda.pin - 8u) * 4u));
 
-    /* Enable I2C1 clock, pulse reset, then configure for 400 kHz (APB1 = 16 MHz HSI). */
+    /* Enable I2C1 clock, pulse reset, then configure for 50 kHz standard mode (APB1 = 16 MHz HSI). */
     RCC->APB1ENR  |=  RCC_APB1ENR_I2C1EN_Msk;
     RCC->APB1RSTR |=  RCC_APB1RSTR_I2C1RST_Msk;
     RCC->APB1RSTR &= ~RCC_APB1RSTR_I2C1RST_Msk;
@@ -329,8 +329,8 @@ static bool platform_target_i2c1_init(const platform_i2c_config_t *config)
     I2C1->CR1   =  I2C_CR1_SWRST_Msk;
     I2C1->CR1   =  0u;
     I2C1->CR2   =  16u;                        /* FREQ = 16 MHz */
-    I2C1->CCR   =  80u;                        /* standard mode, 100 kHz: 16 MHz / (2 * 100 kHz) */
-    I2C1->TRISE =  17u;                        /* (16 MHz * 1000 ns) + 1 */
+    I2C1->CCR   =  160u;                       /* standard mode, 50 kHz: 16 MHz / (2 * 50 kHz) */
+    I2C1->TRISE =  17u;                        /* standard mode rise-time limit: (16 MHz * 1000 ns) + 1 */
     I2C1->CR1   =  I2C_CR1_PE_Msk | I2C_CR1_ACK_Msk;
 
     return true;
@@ -378,6 +378,18 @@ platform_i2c_debug_t platform_i2c1_get_debug(void)
     return g_i2c1_debug;
 }
 
+platform_i2c1_gpio_debug_t platform_i2c1_get_gpio_debug(void)
+{
+    return (platform_i2c1_gpio_debug_t){
+        .scl_level = (GPIOB->IDR >> 8u) & 0x1u,
+        .sda_level = (GPIOB->IDR >> 9u) & 0x1u,
+        .moder = GPIOB->MODER,
+        .otyper = GPIOB->OTYPER,
+        .pupdr = GPIOB->PUPDR,
+        .afr1 = GPIOB->AFR[1],
+    };
+}
+
 static platform_io_status_t platform_target_uart_output_write(const uint8_t *data, uint16_t length)
 {
     uint16_t index;
@@ -402,6 +414,12 @@ static platform_io_status_t platform_target_uart_output_write(const uint8_t *dat
 platform_i2c_debug_t platform_i2c1_get_debug(void)
 {
     platform_i2c_debug_t debug = {0u, 0u, 0u};
+    return debug;
+}
+
+platform_i2c1_gpio_debug_t platform_i2c1_get_gpio_debug(void)
+{
+    platform_i2c1_gpio_debug_t debug = {0u, 0u, 0u, 0u, 0u, 0u};
     return debug;
 }
 #endif
