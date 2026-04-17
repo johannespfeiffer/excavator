@@ -17,6 +17,7 @@ set(EXCAVATOR_COMMON_SOURCES
     src/drivers/gps/gps_parser.c
     src/math/kinematics.c
     src/math/orientation.c
+    src/model/excavator_state.c
     src/platform/platform.c
     src/platform/platform_simulated_io.c
 )
@@ -28,6 +29,7 @@ set(EXCAVATOR_COMMON_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/drivers/bmi160
     ${CMAKE_CURRENT_SOURCE_DIR}/src/drivers/gps
     ${CMAKE_CURRENT_SOURCE_DIR}/src/math
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/model
     ${CMAKE_CURRENT_SOURCE_DIR}/src/platform
 )
 

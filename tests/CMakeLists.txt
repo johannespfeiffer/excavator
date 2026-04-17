@@ -34,6 +34,15 @@ target_compile_options(excavator_gps_tests PRIVATE -Wall -Wextra -Wpedantic)
 
 add_test(NAME excavator_gps_tests COMMAND $<TARGET_FILE:excavator_gps_tests>)
 
+add_executable(excavator_state_tests
+    test_excavator_state.c
+)
+
+target_link_libraries(excavator_state_tests PRIVATE excavator_core)
+target_compile_options(excavator_state_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+add_test(NAME excavator_state_tests COMMAND $<TARGET_FILE:excavator_state_tests>)
+
 add_executable(excavator_platform_tests
     test_platform.c
 )
