@@ -37,8 +37,15 @@ int app_run(void)
     int status_code = 0;
     uint32_t loop_delay;
 
-    /* I2C bus scan — runs once at startup, prints every address that ACKs. */
-    {
+    
+
+    /*
+     * Bench target for the NUCLEO-F446RE: read S1 on I2C1 and emit repeated
+     * plain-ASCII telemetry over USART2/ST-LINK VCP.
+     */
+    for (;;) {
+
+/* I2C bus scan — runs once at startup, prints every address that ACKs. */
         uint8_t scan_addr;
         uint8_t scan_dummy;
         char scan_line[48];
@@ -61,13 +68,11 @@ int app_run(void)
             (void)platform_uart_write(PLATFORM_UART_OUTPUT,
                                       (const uint8_t *)scan_line, scan_len);
         }
-    }
 
-    /*
-     * Bench target for the NUCLEO-F446RE: read S1 on I2C1 and emit repeated
-     * plain-ASCII telemetry over USART2/ST-LINK VCP.
-     */
-    for (;;) {
+
+
+
+
         bmi160_status_t read_status = BMI160_STATUS_OK;
 
         status_code = 0;
