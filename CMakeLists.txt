@@ -18,6 +18,7 @@ set(EXCAVATOR_COMMON_SOURCES
     src/math/kinematics.c
     src/math/orientation.c
     src/platform/platform.c
+    src/platform/platform_simulated_io.c
 )
 
 set(EXCAVATOR_COMMON_INCLUDES

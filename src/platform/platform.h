@@ -51,6 +51,8 @@ typedef enum {
     PLATFORM_IO_STATUS_NOT_READY = 2,
     PLATFORM_IO_STATUS_NOT_FOUND = 3,
     PLATFORM_IO_STATUS_NOT_IMPLEMENTED = 4,
+    PLATFORM_IO_STATUS_EMPTY = 5,
+    PLATFORM_IO_STATUS_OVERFLOW = 6,
 } platform_io_status_t;
 
 typedef struct {
@@ -74,6 +76,7 @@ platform_io_status_t platform_i2c_read_registers(platform_i2c_bus_t bus,
                                                  uint8_t register_address,
                                                  uint8_t *data,
                                                  uint16_t length);
+platform_io_status_t platform_uart_read_byte(platform_uart_t uart, uint8_t *byte_out);
 bool platform_simulated_i2c_set_registers(platform_i2c_bus_t bus,
                                           uint8_t device_address,
                                           uint8_t register_address,
@@ -84,5 +87,8 @@ bool platform_simulated_i2c_get_registers(platform_i2c_bus_t bus,
                                           uint8_t register_address,
                                           uint8_t *data,
                                           uint16_t length);
+platform_io_status_t platform_simulated_uart_feed(platform_uart_t uart,
+                                                  const uint8_t *data,
+                                                  uint16_t length);
 
 #endif

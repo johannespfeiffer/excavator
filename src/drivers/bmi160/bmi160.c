@@ -102,6 +102,10 @@ bmi160_status_t bmi160_read_sample(platform_i2c_bus_t bus, bmi160_sample_t *samp
         return BMI160_STATUS_INVALID_ARGUMENT;
     }
 
+    /*
+     * BMI160 exposes gyro and accel samples in one contiguous register block,
+     * so a single burst read keeps the sample coherent.
+     */
     if (platform_i2c_read_registers(bus, BMI160_I2C_ADDRESS, BMI160_REG_GYRO_DATA, data, sizeof(data)) !=
         PLATFORM_IO_STATUS_OK) {
         return BMI160_STATUS_COMMUNICATION_ERROR;

@@ -25,6 +25,15 @@ target_compile_options(excavator_bmi160_tests PRIVATE -Wall -Wextra -Wpedantic)
 
 add_test(NAME excavator_bmi160_tests COMMAND $<TARGET_FILE:excavator_bmi160_tests>)
 
+add_executable(excavator_gps_tests
+    test_gps_parser.c
+)
+
+target_link_libraries(excavator_gps_tests PRIVATE excavator_core)
+target_compile_options(excavator_gps_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+add_test(NAME excavator_gps_tests COMMAND $<TARGET_FILE:excavator_gps_tests>)
+
 add_executable(excavator_platform_tests
     test_platform.c
 )
@@ -33,6 +42,15 @@ target_link_libraries(excavator_platform_tests PRIVATE excavator_core)
 target_compile_options(excavator_platform_tests PRIVATE -Wall -Wextra -Wpedantic)
 
 add_test(NAME excavator_platform_tests COMMAND $<TARGET_FILE:excavator_platform_tests>)
+
+add_executable(excavator_platform_io_tests
+    test_platform_io.c
+)
+
+target_link_libraries(excavator_platform_io_tests PRIVATE excavator_core)
+target_compile_options(excavator_platform_io_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+add_test(NAME excavator_platform_io_tests COMMAND $<TARGET_FILE:excavator_platform_io_tests>)
 
 add_executable(excavator_config_tests
     test_config.c
