@@ -54,16 +54,18 @@ int main(void)
         assert(excavator_state_set_imu_sample(&state, (excavator_sensor_id_t)index, &sample));
     }
 
+    assert(excavator_state_calibrate_zero_pose(&state));
     assert(excavator_state_estimate_orientation_quasistatic(&state));
     assert(excavator_state_inputs_ready(&state));
     assert(excavator_state_update_result(&state));
     assert(state.result.valid);
     assert(state.result.bucket_height.inputs_valid);
-    assert(float_close(state.result.bucket_height.delta_height_m, -0.09983342f, 0.0001f));
-    assert(float_close(state.result.bucket_height.absolute_height_m, 41.90016658f, 0.0001f));
+    assert(state.calibration.zero_pose.valid);
+    assert(float_close(state.result.bucket_height.delta_height_m, 0.0f, 0.0001f));
+    assert(float_close(state.result.bucket_height.absolute_height_m, 42.0f, 0.0001f));
     assert(float_close(state.estimation.orientation.s1_angle_rad, 0.0f, 0.0001f));
-    assert(float_close(state.estimation.orientation.s2_angle_rad, 0.1f, 0.0001f));
-    assert(float_close(state.estimation.orientation.s3_angle_rad, -0.1f, 0.0001f));
+    assert(float_close(state.estimation.orientation.s2_angle_rad, 0.0f, 0.0001f));
+    assert(float_close(state.estimation.orientation.s3_angle_rad, 0.0f, 0.0001f));
     assert(float_close(state.estimation.orientation.s4_angle_rad, 0.0f, 0.0001f));
 
     excavator_state_set_gps_fix(&state, &(gps_fix_t){ .valid = false, .altitude_m = 0.0f });

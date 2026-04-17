@@ -68,6 +68,8 @@ int app_run(void)
         }
     }
 
+    (void)excavator_state_calibrate_zero_pose(&state);
+
     if (!excavator_state_estimate_orientation_quasistatic(&state)) {
         return 5;
     }

@@ -1,6 +1,7 @@
 #ifndef EXCAVATOR_STATE_H
 #define EXCAVATOR_STATE_H
 
+#include "calibration.h"
 #include "bmi160.h"
 #include "config.h"
 #include "gps_parser.h"
@@ -35,6 +36,10 @@ typedef struct {
 } excavator_estimation_t;
 
 typedef struct {
+    excavator_calibration_t zero_pose;
+} excavator_calibration_state_t;
+
+typedef struct {
     bool valid;
     bucket_height_result_t bucket_height;
 } excavator_result_data_t;
@@ -44,6 +49,7 @@ typedef struct {
     platform_status_t platform_status;
     excavator_raw_data_t raw;
     excavator_reference_height_t gps_reference;
+    excavator_calibration_state_t calibration;
     excavator_estimation_t estimation;
     excavator_result_data_t result;
 } excavator_state_t;
@@ -55,6 +61,7 @@ bool excavator_state_set_imu_sample(excavator_state_t *state,
 void excavator_state_set_gps_fix(excavator_state_t *state, const gps_fix_t *fix);
 void excavator_state_set_orientation(excavator_state_t *state, const orientation_estimate_t *orientation);
 void excavator_state_set_platform_status(excavator_state_t *state, platform_status_t status);
+bool excavator_state_calibrate_zero_pose(excavator_state_t *state);
 bool excavator_state_estimate_orientation_quasistatic(excavator_state_t *state);
 bool excavator_state_update_result(excavator_state_t *state);
 bool excavator_state_inputs_ready(const excavator_state_t *state);

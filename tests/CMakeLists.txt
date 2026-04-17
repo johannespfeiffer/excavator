@@ -16,6 +16,15 @@ target_compile_options(excavator_orientation_tests PRIVATE -Wall -Wextra -Wpedan
 
 add_test(NAME excavator_orientation_tests COMMAND $<TARGET_FILE:excavator_orientation_tests>)
 
+add_executable(excavator_calibration_tests
+    test_calibration.c
+)
+
+target_link_libraries(excavator_calibration_tests PRIVATE excavator_core)
+target_compile_options(excavator_calibration_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+add_test(NAME excavator_calibration_tests COMMAND $<TARGET_FILE:excavator_calibration_tests>)
+
 add_executable(excavator_telemetry_tests
     test_telemetry.c
 )

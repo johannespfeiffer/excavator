@@ -18,6 +18,7 @@ set(EXCAVATOR_COMMON_SOURCES
     src/drivers/gps/gps_parser.c
     src/math/kinematics.c
     src/math/orientation.c
+    src/model/calibration.c
     src/model/excavator_state.c
     src/platform/platform.c
     src/platform/platform_simulated_io.c
