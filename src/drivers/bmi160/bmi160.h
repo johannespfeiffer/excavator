@@ -22,7 +22,7 @@ typedef struct {
 } bmi160_sample_t;
 
 enum {
-    BMI160_I2C_ADDRESS = 0x68u,
+    BMI160_I2C_ADDRESS = 0x69u,
     BMI160_CHIP_ID_VALUE = 0xD1u,
     BMI160_REG_CHIP_ID = 0x00u,
     BMI160_REG_GYRO_DATA = 0x0Cu,
