@@ -69,6 +69,7 @@ if(EXCAVATOR_ENABLE_TARGET)
         target_link_options(excavator_firmware.elf PRIVATE
             -T${CMAKE_CURRENT_SOURCE_DIR}/linker/stm32f446re.ld
             -Wl,--gc-sections
+            -Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/excavator_firmware.map
             -mcpu=cortex-m4
             -mthumb
         )
@@ -76,9 +77,15 @@ if(EXCAVATOR_ENABLE_TARGET)
 
     add_custom_command(
         TARGET excavator_firmware.elf POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -O binary
+                $<TARGET_FILE:excavator_firmware.elf>
+                ${CMAKE_CURRENT_BINARY_DIR}/excavator_firmware.bin
+        COMMAND ${CMAKE_OBJCOPY} -O ihex
+                $<TARGET_FILE:excavator_firmware.elf>
+                ${CMAKE_CURRENT_BINARY_DIR}/excavator_firmware.hex
         COMMAND ${CMAKE_SIZE} $<TARGET_FILE:excavator_firmware.elf>
         VERBATIM
-        COMMENT "Size information for excavator_firmware.elf"
+        COMMENT "Generating firmware artifacts for excavator_firmware.elf"
     )
 endif()
 
